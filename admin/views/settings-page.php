@@ -60,7 +60,7 @@ $acs_tab_url = function ( string $tab ) : string {
 
 	<?php if ( ! $acs_is_configured ) : ?>
 	<div class="notice notice-warning">
-		<p><?php esc_html_e( 'Plugin is not fully configured. Please fill in the API URL, API Key, and Site ID on the Connection tab.', 'ai-ischat' ); ?></p>
+		<p><?php esc_html_e( 'Plugin is not fully configured. Please fill in the API Key and Site ID on the Connection tab.', 'ai-ischat' ); ?></p>
 	</div>
 	<?php endif; ?>
 

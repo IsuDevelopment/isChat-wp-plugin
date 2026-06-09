@@ -6,7 +6,7 @@
  * Version:     1.0.0
  * Author:      IsChat
  * License:     GPL-2.0-or-later
- * Text Domain: ai-chatbot-saas
+ * Text Domain: ai-ischat
  */
 
 declare(strict_types=1);
@@ -75,7 +75,7 @@ function acs_register_index_metabox(): void {
 		$post_types = ACS_Content_Extractor::get_enabled_post_types();
 		add_meta_box(
 			'acs_index_settings',
-			__( 'AI Indexing', 'ai-chatbot-saas' ),
+			__( 'AI Indexing', 'ai-ischat' ),
 			'acs_render_index_metabox',
 			$post_types,
 			'side',
@@ -130,34 +130,34 @@ function acs_render_index_metabox( WP_Post $post ): void {
 	?>
 	<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
 		<input type="checkbox" name="_acs_ai_index_enabled" value="1" <?php checked( true, $is_enabled ); ?> />
-		<span><?php esc_html_e( 'Index in IsChat', 'ai-chatbot-saas' ); ?></span>
+		<span><?php esc_html_e( 'Index in IsChat', 'ai-ischat' ); ?></span>
 	</label>
 	<p style="margin:6px 0 0;color:#666;font-size:11px;">
-		<?php esc_html_e( 'Only checked posts can be indexed. Saving the post does not auto-index it — use the manual button below.', 'ai-chatbot-saas' ); ?>
+		<?php esc_html_e( 'Only checked posts can be indexed. Saving the post does not auto-index it — use the manual button below.', 'ai-ischat' ); ?>
 	</p>
 	<p style="margin:10px 0 0;font-size:12px;">
-		<strong><?php esc_html_e( 'Chatbot Indexed:', 'ai-chatbot-saas' ); ?></strong>
+		<strong><?php esc_html_e( 'Chatbot Indexed:', 'ai-ischat' ); ?></strong>
 		<?php echo $is_indexed ? '✓' : '✕'; ?>
 	</p>
 	<p style="margin:6px 0 0;font-size:12px;">
-		<strong><?php esc_html_e( 'Last Indexed:', 'ai-chatbot-saas' ); ?></strong>
-		<?php echo $last_indexed_at ? esc_html( $last_indexed_at ) : esc_html__( 'Never', 'ai-chatbot-saas' ); ?>
+		<strong><?php esc_html_e( 'Last Indexed:', 'ai-ischat' ); ?></strong>
+		<?php echo $last_indexed_at ? esc_html( $last_indexed_at ) : esc_html__( 'Never', 'ai-ischat' ); ?>
 	</p>
 	<?php if ( 'auto-draft' !== $post->post_status ) : ?>
 	<p style="margin-top:12px;">
 		<?php if ( $can_index_now ) : ?>
 			<a class="button button-primary" href="<?php echo esc_url( $manual_index_url ); ?>">
-				<?php esc_html_e( 'Manual Index Page', 'ai-chatbot-saas' ); ?>
+				<?php esc_html_e( 'Manual Index Page', 'ai-ischat' ); ?>
 			</a>
 		<?php else : ?>
 			<button type="button" class="button button-primary" disabled>
-				<?php esc_html_e( 'Manual Index Page', 'ai-chatbot-saas' ); ?>
+				<?php esc_html_e( 'Manual Index Page', 'ai-ischat' ); ?>
 			</button>
 		<?php endif; ?>
 	</p>
 	<?php endif; ?>
 	<p style="margin:6px 0 0;color:#666;font-size:11px;">
-		<?php esc_html_e( 'Manual indexing is available only for published posts with "Index in IsChat" enabled and a configured plugin connection.', 'ai-chatbot-saas' ); ?>
+		<?php esc_html_e( 'Manual indexing is available only for published posts with "Index in IsChat" enabled and a configured plugin connection.', 'ai-ischat' ); ?>
 	</p>
 	<?php
 }

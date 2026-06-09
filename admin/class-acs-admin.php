@@ -194,7 +194,7 @@ class ACS_Admin {
 
 		if ( ! ACS_Sync_Manager::is_configured() ) {
 			wp_send_json_error( [
-				'message' => __( 'Plugin is not fully configured. Please fill in the API URL, API Key, and Site ID.', 'ai-ischat' ),
+				'message' => __( 'Plugin is not fully configured. Please fill in the API Key and Site ID.', 'ai-ischat' ),
 			] );
 		}
 

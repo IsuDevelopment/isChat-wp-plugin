@@ -34,7 +34,24 @@ if ( ! defined( 'ACS_API_BASE_URL' ) ) {
 	define( 'ACS_API_BASE_URL', 'https://ischat-backend-production.up.railway.app' );
 }
 
+require_once ACS_PLUGIN_DIR . 'vendor/autoload.php';
+
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+
+$acs_update_checker = PucFactory::buildUpdateChecker(
+	'https://github.com/IsuDevelopment/isChat-wp-plugin/',
+	__FILE__,
+	'ai-ischat'
+);
+/** @var \YahnisElsts\PluginUpdateChecker\v5p7\Vcs\GitHubApi $acs_vcs_api */
+$acs_vcs_api = $acs_update_checker->getVcsApi();
+$acs_vcs_api->enableReleaseAssets();
+
 require_once ACS_PLUGIN_DIR . 'includes/class-acs-api-client.php';
+require_once ACS_PLUGIN_DIR . 'includes/blocks/interface-acs-block-handler.php';
+require_once ACS_PLUGIN_DIR . 'includes/blocks/class-acs-block-handler-core-file.php';
+require_once ACS_PLUGIN_DIR . 'includes/blocks/class-acs-block-handler-t2-file-item.php';
+require_once ACS_PLUGIN_DIR . 'includes/class-acs-block-extractor.php';
 require_once ACS_PLUGIN_DIR . 'includes/class-acs-content-extractor.php';
 require_once ACS_PLUGIN_DIR . 'includes/class-acs-sync-queue.php';
 require_once ACS_PLUGIN_DIR . 'includes/class-acs-sync-manager.php';

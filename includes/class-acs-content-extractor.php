@@ -104,6 +104,12 @@ class ACS_Content_Extractor {
 			$parts[] = wp_strip_all_tags( $post->post_excerpt );
 		}
 
+		// Extract title + description from Gutenberg file blocks (core/file, t2/file-item, …).
+		$block_text = ACS_Block_Extractor::extract_file_text( $post->post_content );
+		if ( '' !== $block_text ) {
+			$parts[] = $block_text;
+		}
+
 		// Apply WP content filters (handles shortcodes, blocks, etc.)
 		$content = apply_filters( 'the_content', $post->post_content );
 		$content = wp_strip_all_tags( $content );

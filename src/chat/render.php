@@ -26,12 +26,9 @@ if ( '1' !== get_option( 'acs_widget_enabled', '0' ) ) {
 	);
 }
 
-$height = isset( $attributes['height'] ) ? sanitize_text_field( (string) $attributes['height'] ) : '500px';
-
 printf(
-	'<div %1$s style="height:%2$s"><div data-ischat-chat data-site-id="%3$s" data-api-url="%4$s" data-lang="%5$s" style="height:100%%"></div></div>',
+	'<div %1$s><div data-ischat-chat data-site-id="%2$s" data-api-url="%3$s" data-lang="%4$s"></div></div>',
 	get_block_wrapper_attributes(),
-	esc_attr( $height ),
 	esc_attr( $site_id ),
 	esc_url( ACS_API_BASE_URL ),
 	esc_attr( get_locale() )

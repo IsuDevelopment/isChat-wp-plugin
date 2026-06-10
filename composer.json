@@ -1,0 +1,14 @@
+{
+	"name": "isudev/ai-ischat",
+	"description": "IsChat WordPress Plugin",
+	"type": "wordpress-plugin",
+	"require": {
+		"yahnis-elsts/plugin-update-checker": "^5.5"
+	},
+	"config": {
+		"optimize-autoloader": true
+	},
+	"autoload": {
+		"classmap": ["vendor/"]
+	}
+}

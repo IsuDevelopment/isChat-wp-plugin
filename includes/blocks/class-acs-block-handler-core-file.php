@@ -21,7 +21,7 @@ class ACS_Block_Handler_Core_File implements ACS_Block_Handler_Interface {
 	public function extract( array $block ): string {
 		$attrs = $block['attrs'] ?? [];
 		$id    = isset( $attrs['id'] ) ? (int) $attrs['id'] : 0;
-		$href  = isset( $attrs['href'] ) ? (string) $attrs['href'] : '';
+		$href  = isset( $attrs['href'] ) ? esc_url_raw( (string) $attrs['href'] ) : '';
 
 		$title       = '';
 		$description = '';
@@ -38,11 +38,17 @@ class ACS_Block_Handler_Core_File implements ACS_Block_Handler_Interface {
 			$title = basename( (string) wp_parse_url( $href, PHP_URL_PATH ) );
 		}
 
-		$parts = array_filter( [ $title, $description ] );
-		if ( empty( $parts ) ) {
+		if ( '' === $title && '' === $href ) {
 			return '';
 		}
 
-		return 'Załącznik: ' . implode( '. ', $parts );
+		$parts = array_filter( [ $title, $description ] );
+		$text  = 'Załącznik: ' . implode( '. ', $parts );
+
+		if ( '' !== $href ) {
+			$text .= ' ' . $href;
+		}
+
+		return $text;
 	}
 }

@@ -1,6 +1,6 @@
 {
 	"name": "@isudev/ai-ischat",
-	"version": "1.0.0",
+	"version": "0.0.3",
 	"private": true,
 	"devDependencies": {
 		"@wordpress/scripts": "^31.8.0"

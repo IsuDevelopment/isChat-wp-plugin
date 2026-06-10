@@ -3,7 +3,7 @@
  * Plugin Name:       IsChat
  * Plugin URI:        https://ischat.ai
  * Description:       Connects your WordPress site to the IsChat AI chat and search platform.
- * Version:           0.0.5
+ * Version:           0.0.6
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Tested up to:      6.8
@@ -160,21 +160,21 @@ function acs_register_rest_routes(): void {
 	} );
 }
 
-function acs_rest_index_post( WP_REST_Request $request ): WP_REST_Response {
+function acs_rest_index_post( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 	$post = get_post( (int) $request['id'] );
 
 	if ( ! $post instanceof WP_Post ) {
-		return new WP_REST_Response( [ 'error' => __( 'Post not found.', 'ai-ischat' ) ], 404 );
+		return new WP_Error( 'acs_not_found', __( 'Post not found.', 'ai-ischat' ), [ 'status' => 404 ] );
 	}
 
 	if ( ! ACS_Sync_Manager::is_configured() ) {
-		return new WP_REST_Response( [ 'error' => __( 'Plugin is not configured.', 'ai-ischat' ) ], 400 );
+		return new WP_Error( 'acs_not_configured', __( 'Plugin is not configured (missing API key or Site ID).', 'ai-ischat' ), [ 'status' => 400 ] );
 	}
 
 	$result = ACS_Sync_Manager::index_post_now( $post );
 
 	if ( ! $result['success'] ) {
-		return new WP_REST_Response( [ 'error' => $result['message'] ], 400 );
+		return new WP_Error( 'acs_index_failed', $result['message'], [ 'status' => 400 ] );
 	}
 
 	return new WP_REST_Response(

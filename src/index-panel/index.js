@@ -20,7 +20,7 @@ function AcsIndexPanel() {
 
 	const { editPost } = useDispatch( editorStore );
 
-	const { meta, modified, postId, isSavingPost, postStatus } = useSelect(
+	const { meta, modified, postId, isSavingPost, postStatus, isDirty } = useSelect(
 		( select ) => {
 			const s = select( editorStore );
 			return {
@@ -29,6 +29,7 @@ function AcsIndexPanel() {
 				postId:       s.getCurrentPostId(),
 				isSavingPost: s.isSavingPost(),
 				postStatus:   s.getEditedPostAttribute( 'status' ),
+				isDirty:      s.isEditedPostDirty(),
 			};
 		}
 	);
@@ -174,9 +175,7 @@ function AcsIndexPanel() {
 						variant="primary"
 						size="small"
 						onClick={ handleManualIndex }
-						disabled={
-							indexing || isSavingPost || ! isPublished
-						}
+						disabled={ indexing || isSavingPost || ! isPublished || isDirty }
 					>
 						{ indexing ? (
 							<>
@@ -188,12 +187,15 @@ function AcsIndexPanel() {
 						) }
 					</Button>
 
+					{ isDirty && isPublished && (
+						<p style={ { fontSize: 11, color: '#757575', marginTop: 4 } }>
+							{ __( 'Save the post first to apply changes.', 'ai-ischat' ) }
+						</p>
+					) }
+
 					{ ! isPublished && (
 						<p style={ { fontSize: 11, color: '#757575', marginTop: 4 } }>
-							{ __(
-								'Manual indexing is available for published posts only.',
-								'ai-ischat'
-							) }
+							{ __( 'Manual indexing is available for published posts only.', 'ai-ischat' ) }
 						</p>
 					) }
 				</>

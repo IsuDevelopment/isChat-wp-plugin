@@ -104,6 +104,12 @@ class ACS_Content_Extractor {
 			$parts[] = wp_strip_all_tags( $post->post_excerpt );
 		}
 
+		// Extra AI description — admin-supplied context not visible on the page.
+		$extra = get_post_meta( $post->ID, '_acs_extra_description', true );
+		if ( ! empty( trim( (string) $extra ) ) ) {
+			$parts[] = sanitize_textarea_field( (string) $extra );
+		}
+
 		// Extract title + description from Gutenberg file blocks (core/file, t2/file-item, …).
 		$block_text = ACS_Block_Extractor::extract_file_text( $post->post_content );
 		if ( '' !== $block_text ) {

@@ -11,7 +11,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class ACS_Sync_Manager {
 
-	const CRON_HOOK = 'acs_process_sync_queue';
+	const CRON_HOOK        = 'acs_process_sync_queue';
+	const CATCHUP_CRON_HOOK = 'acs_catchup_sync';
 
 	public static function init(): void {
 		// WordPress hooks for content changes
@@ -23,6 +24,12 @@ class ACS_Sync_Manager {
 		add_action( self::CRON_HOOK, [ __CLASS__, 'process_queue' ] );
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'acs_five_minutes', self::CRON_HOOK );
+		}
+
+		// Daily catch-up — queues enabled posts modified since last index
+		add_action( self::CATCHUP_CRON_HOOK, [ __CLASS__, 'catchup_sync' ] );
+		if ( ! wp_next_scheduled( self::CATCHUP_CRON_HOOK ) ) {
+			wp_schedule_event( time(), 'daily', self::CATCHUP_CRON_HOOK );
 		}
 
 		add_filter( 'cron_schedules', [ __CLASS__, 'add_cron_interval' ] );
@@ -161,6 +168,39 @@ class ACS_Sync_Manager {
 		}
 
 		return $count;
+	}
+
+	/**
+	 * Daily catch-up: queue enabled posts modified after their last successful index.
+	 * Catches posts missed when the plugin was inactive or sync failed.
+	 * Capped at 200 posts per run; the 5-min queue cron handles the rest.
+	 */
+	public static function catchup_sync(): void {
+		global $wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results(
+			"SELECT p.ID, p.post_type FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->postmeta} pm_enabled
+				ON pm_enabled.post_id = p.ID
+				AND pm_enabled.meta_key = '_acs_ai_index_enabled'
+				AND pm_enabled.meta_value = '1'
+			LEFT JOIN {$wpdb->postmeta} pm_indexed
+				ON pm_indexed.post_id = p.ID
+				AND pm_indexed.meta_key = '_acs_last_indexed_at'
+			WHERE p.post_status = 'publish'
+			  AND (
+			      pm_indexed.meta_value IS NULL
+			      OR pm_indexed.meta_value = ''
+			      OR p.post_modified_gmt > pm_indexed.meta_value
+			  )
+			LIMIT 200"
+		);
+		// phpcs:enable
+
+		foreach ( $rows as $row ) {
+			ACS_Sync_Queue::enqueue( (int) $row->ID, $row->post_type, 'upsert' );
+		}
 	}
 
 	public static function is_configured(): bool {

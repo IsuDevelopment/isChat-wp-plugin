@@ -1,0 +1,71 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and release plugin
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build blocks
+        run: npm run build
+
+      - name: Get version from plugin header
+        id: version
+        run: |
+          VERSION=$(grep -m1 'Version:' ai-ischat.php | awk '{print $NF}' | tr -d '[:space:]')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create plugin ZIP
+        run: |
+          mkdir -p /tmp/ai-ischat
+          rsync -av \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='src' \
+            --exclude='package.json' \
+            --exclude='package-lock.json' \
+            --exclude='*.zip' \
+            --exclude='.DS_Store' \
+            . /tmp/ai-ischat/
+          cd /tmp
+          zip -r ai-ischat.zip ai-ischat/
+          echo "ZIP created: $(du -sh /tmp/ai-ischat.zip)"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "v${{ steps.version.outputs.version }}"
+          tag_name: ${{ github.ref_name }}
+          body: |
+            ## IsChat WordPress Plugin v${{ steps.version.outputs.version }}
+
+            ### Installation
+            1. Download `ai-ischat.zip` below
+            2. Go to **Plugins → Add New → Upload Plugin**
+            3. Upload the ZIP and activate
+
+            ### Changelog
+            See commit history for details.
+          files: /tmp/ai-ischat.zip
+          fail_on_unmatched_files: true

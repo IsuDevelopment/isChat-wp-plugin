@@ -3,13 +3,19 @@
 	const useBlockProps = blockEditor.useBlockProps;
 	const __ = i18n.__;
 
-	blocks.registerBlockType( 'ischat/search', {
-		title: __( 'IsChat Search', 'ai-ischat' ),
-		description: __( 'Inline contextual AI search block powered by IsChat.', 'ai-ischat' ),
-		icon: 'search',
+	blocks.registerBlockType( 'ischat/chat', {
+		title: __( 'IsChat Chat', 'ai-ischat' ),
+		description: __( 'Inline chat window powered by IsChat. Visitors can chat directly on the page.', 'ai-ischat' ),
+		icon: 'format-chat',
 		category: 'widgets',
 		supports: {
 			html: false,
+		},
+		attributes: {
+			height: {
+				type: 'string',
+				default: '500px',
+			},
 		},
 		edit: function () {
 			const blockProps = useBlockProps( {
@@ -26,13 +32,13 @@
 				'div',
 				blockProps,
 				el( 'span', {
-					className: 'dashicons dashicons-search',
+					className: 'dashicons dashicons-format-chat',
 					style: { fontSize: '28px', color: '#2563eb', display: 'block', marginBottom: '8px' },
 				} ),
-				el( 'strong', { style: { display: 'block', color: '#1d2327' } }, __( 'IsChat Search', 'ai-ischat' ) ),
+				el( 'strong', { style: { display: 'block', color: '#1d2327' } }, __( 'IsChat Chat', 'ai-ischat' ) ),
 				el( 'p', {
 					style: { margin: '4px 0 0', color: '#757575', fontSize: '12px' },
-				}, __( 'AI search widget will appear here on the frontend.', 'ai-ischat' ) )
+				}, __( 'Chat widget will appear here on the frontend.', 'ai-ischat' ) )
 			);
 		},
 		save: function () {

@@ -1,0 +1,13 @@
+{
+	"name": "@isudev/ai-ischat",
+	"version": "1.0.0",
+	"private": true,
+	"devDependencies": {
+		"@wordpress/scripts": "^31.8.0"
+	},
+	"scripts": {
+		"build": "wp-scripts build --webpack-copy-php",
+		"clean": "rm -rf node_modules build dist .turbo",
+		"start": "wp-scripts start --webpack-copy-php"
+	}
+}

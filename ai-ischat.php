@@ -1,12 +1,17 @@
 <?php
 /**
- * Plugin Name: IsChat
- * Plugin URI:  https://example.com
- * Description: Connects your WordPress site to the IsChat platform.
- * Version:     1.0.0
- * Author:      IsChat
- * License:     GPL-2.0-or-later
- * Text Domain: ai-ischat
+ * Plugin Name:       IsChat
+ * Plugin URI:        https://ischat.ai
+ * Description:       Connects your WordPress site to the IsChat AI chat and search platform.
+ * Version:           1.0.0
+ * Requires at least: 6.4
+ * Requires PHP:      8.1
+ * Tested up to:      6.8
+ * Author:            IsChat
+ * License:           GPL-2.0-or-later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain:       ai-ischat
+ * Domain Path:       /languages
  */
 
 declare(strict_types=1);
@@ -26,7 +31,7 @@ define( 'ACS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
  *   define( 'ACS_API_BASE_URL', 'http://localhost:8000' );
  */
 if ( ! defined( 'ACS_API_BASE_URL' ) ) {
-	define( 'ACS_API_BASE_URL', 'https://app.ischat.com' );
+	define( 'ACS_API_BASE_URL', 'https://ischat-backend-production.up.railway.app' );
 }
 
 require_once ACS_PLUGIN_DIR . 'includes/class-acs-api-client.php';
@@ -34,12 +39,14 @@ require_once ACS_PLUGIN_DIR . 'includes/class-acs-content-extractor.php';
 require_once ACS_PLUGIN_DIR . 'includes/class-acs-sync-queue.php';
 require_once ACS_PLUGIN_DIR . 'includes/class-acs-sync-manager.php';
 require_once ACS_PLUGIN_DIR . 'includes/class-acs-search-block.php';
+require_once ACS_PLUGIN_DIR . 'includes/class-acs-chat-block.php';
 require_once ACS_PLUGIN_DIR . 'admin/class-acs-admin.php';
 
 function acs_init(): void {
 	ACS_Admin::init();
 	ACS_Sync_Manager::init();
 	ACS_Search_Block::init();
+	ACS_Chat_Block::init();
 	acs_register_index_metabox();
 }
 add_action( 'plugins_loaded', 'acs_init' );

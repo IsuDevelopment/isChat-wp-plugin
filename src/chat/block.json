@@ -1,0 +1,21 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "ischat/chat",
+	"title": "IsChat Chat",
+	"category": "widgets",
+	"icon": "format-chat",
+	"description": "Inline chat window powered by IsChat. Visitors can chat directly on the page.",
+	"supports": {
+		"html": false
+	},
+	"attributes": {
+		"height": {
+			"type": "string",
+			"default": "500px"
+		}
+	},
+	"editorScript": "file:./index.js",
+	"render": "file:./render.php",
+	"textdomain": "ai-ischat"
+}

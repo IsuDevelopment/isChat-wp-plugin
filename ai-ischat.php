@@ -3,7 +3,7 @@
  * Plugin Name:       IsChat
  * Plugin URI:        https://ischat.ai
  * Description:       Connects your WordPress site to the IsChat AI chat and search platform.
- * Version:           1.0.0
+ * Version:           0.0.2
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Tested up to:      6.8

@@ -10,6 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class ACS_Extractor_WooCommerce {
+	private const PRODUCT_SCHEMA_VERSION = 1;
+	private const MAX_VARIATIONS          = 500;
 
 	/**
 	 * Extract a WooCommerce product without requiring WooCommerce at plugin load time.
@@ -41,6 +43,7 @@ class ACS_Extractor_WooCommerce {
 		$image_id          = (int) $product->get_image_id();
 		$image_url         = $image_id ? wp_get_attachment_image_url( $image_id, 'medium' ) : '';
 		$gallery_urls      = self::gallery_urls( $product );
+		$variations        = self::variations( $product );
 
 		$content_parts = array_filter(
 			[
@@ -60,6 +63,7 @@ class ACS_Extractor_WooCommerce {
 		);
 
 		$metadata = [
+			'product_schema_version' => self::PRODUCT_SCHEMA_VERSION,
 			'entity_type'         => 'product',
 			'product_type'        => sanitize_key( (string) $product->get_type() ),
 			'sku'                 => sanitize_text_field( (string) $product->get_sku() ),
@@ -81,6 +85,9 @@ class ACS_Extractor_WooCommerce {
 			'featured_image_id'   => $image_id ?: null,
 			'featured_image_url'  => $image_url ?: null,
 			'gallery_image_urls'  => $gallery_urls,
+			'variation_count'      => $variations['total'],
+			'variations_complete' => $variations['complete'],
+			'variations'          => $variations['items'],
 			'excerpt'             => $short_description ?: wp_trim_words( $description, 32, '...' ),
 		];
 
@@ -145,6 +152,90 @@ class ACS_Extractor_WooCommerce {
 			$lines[] = $attribute['name'] . ': ' . implode( ', ', $attribute['values'] );
 		}
 		return [] === $lines ? '' : "Attributes:\n" . implode( "\n", $lines );
+	}
+
+	/**
+	 * Extract concrete purchasable combinations without assuming attribute names.
+	 *
+	 * @param object $product
+	 * @return array{items: array<int, array<string, mixed>>, total: int, complete: bool}
+	 */
+	private static function variations( object $product ): array {
+		if ( ! method_exists( $product, 'get_children' ) ) {
+			return [ 'items' => [], 'total' => 0, 'complete' => true ];
+		}
+
+		$children  = array_values( array_map( 'intval', (array) $product->get_children() ) );
+		$total     = count( $children );
+		$items     = [];
+		$parent_id = method_exists( $product, 'get_id' ) ? (int) $product->get_id() : 0;
+
+		foreach ( array_slice( $children, 0, self::MAX_VARIATIONS ) as $variation_id ) {
+			$variation = wc_get_product( $variation_id );
+			if ( ! is_object( $variation ) || ( method_exists( $variation, 'get_status' ) && 'publish' !== $variation->get_status() ) ) {
+				continue;
+			}
+
+			$image_id  = method_exists( $variation, 'get_image_id' ) ? (int) $variation->get_image_id() : 0;
+			if ( 0 === $image_id && method_exists( $product, 'get_image_id' ) ) {
+				$image_id = (int) $product->get_image_id();
+			}
+			$image_url = $image_id ? wp_get_attachment_image_url( $image_id, 'medium' ) : '';
+			$items[]   = array_filter(
+				[
+					'id'             => $variation_id,
+					'sku'            => sanitize_text_field( (string) $variation->get_sku() ),
+					'attributes'     => self::variation_attributes( $variation, $product ),
+					'price'          => self::decimal_or_null( (string) $variation->get_price() ),
+					'regular_price'  => self::decimal_or_null( (string) $variation->get_regular_price() ),
+					'sale_price'     => self::decimal_or_null( (string) $variation->get_sale_price() ),
+					'currency'       => function_exists( 'get_woocommerce_currency' ) ? (string) get_woocommerce_currency() : '',
+					'stock_status'   => sanitize_key( (string) $variation->get_stock_status() ),
+					'stock_quantity' => null === $variation->get_stock_quantity() ? null : (int) $variation->get_stock_quantity(),
+					'is_purchasable' => (bool) $variation->is_purchasable(),
+					'is_on_sale'     => (bool) $variation->is_on_sale(),
+					'image_url'      => $image_url ?: null,
+					'url'            => method_exists( $variation, 'get_permalink' ) ? (string) $variation->get_permalink() : ( $parent_id ? get_permalink( $parent_id ) : '' ),
+				],
+				static fn ( $value ): bool => null !== $value && '' !== $value && [] !== $value
+			);
+		}
+
+		return [
+			'items'     => $items,
+			'total'     => $total,
+			'complete' => $total <= self::MAX_VARIATIONS,
+		];
+	}
+
+	/**
+	 * @param object $variation
+	 * @param object $parent
+	 * @return array<int, array{name: string, value: string}>
+	 */
+	private static function variation_attributes( object $variation, object $parent ): array {
+		$result = [];
+		foreach ( (array) $variation->get_attributes() as $name => $value ) {
+			$name  = (string) $name;
+			$value = (string) $value;
+			$label = function_exists( 'wc_attribute_label' ) ? (string) wc_attribute_label( $name, $parent ) : $name;
+
+			if ( function_exists( 'taxonomy_exists' ) && taxonomy_exists( $name ) && function_exists( 'get_term_by' ) ) {
+				$term = get_term_by( 'slug', $value, $name );
+				if ( is_object( $term ) && isset( $term->name ) ) {
+					$value = (string) $term->name;
+				}
+			}
+
+			if ( '' !== trim( $label ) && '' !== trim( $value ) ) {
+				$result[] = [
+					'name'  => sanitize_text_field( $label ),
+					'value' => sanitize_text_field( $value ),
+				];
+			}
+		}
+
+		return $result;
 	}
 
 	private static function fact( string $label, string $value ): string {

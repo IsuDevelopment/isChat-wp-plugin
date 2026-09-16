@@ -138,6 +138,14 @@ if ( 2 !== count( $variations ) ) {
 	throw new RuntimeException( 'Expected two structured product variations.' );
 }
 
+if ( true !== ( $metadata['variations_complete'] ?? null ) || 2 !== ( $metadata['variation_count'] ?? null ) ) {
+	throw new RuntimeException( 'Expected a complete structured variation snapshot.' );
+}
+
+if ( false !== stripos( $result['content'], 'Variation 9001' ) || false !== stripos( $result['content'], 'Variation 9002' ) ) {
+	throw new RuntimeException( 'Variation rows must remain structured metadata for atomic backend chunking.' );
+}
+
 $green = $variations[0];
 $red   = $variations[1];
 

@@ -3,7 +3,7 @@
  * Plugin Name:       IsChat
  * Plugin URI:        https://ischat.ai
  * Description:       Connects your WordPress site to the IsChat AI chat and search platform.
- * Version:           0.0.9
+ * Version:           0.1.0
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Tested up to:      6.8
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'ACS_VERSION', '0.0.9' );
+define( 'ACS_VERSION', '0.1.0' );
 define( 'ACS_PLUGIN_FILE', __FILE__ );
 define( 'ACS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ACS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -52,6 +52,7 @@ require_once ACS_PLUGIN_DIR . 'includes/blocks/interface-acs-block-handler.php';
 require_once ACS_PLUGIN_DIR . 'includes/blocks/class-acs-block-handler-core-file.php';
 require_once ACS_PLUGIN_DIR . 'includes/blocks/class-acs-block-handler-t2-file-item.php';
 require_once ACS_PLUGIN_DIR . 'includes/class-acs-block-extractor.php';
+require_once ACS_PLUGIN_DIR . 'includes/class-acs-extractor-woocommerce.php';
 require_once ACS_PLUGIN_DIR . 'includes/class-acs-content-extractor.php';
 require_once ACS_PLUGIN_DIR . 'includes/class-acs-sync-queue.php';
 require_once ACS_PLUGIN_DIR . 'includes/class-acs-sync-manager.php';

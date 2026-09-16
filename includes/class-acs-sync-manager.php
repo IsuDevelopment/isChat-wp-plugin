@@ -19,6 +19,9 @@ class ACS_Sync_Manager {
 		add_action( 'save_post', [ __CLASS__, 'on_save_post' ], 10, 2 );
 		add_action( 'transition_post_status', [ __CLASS__, 'on_transition_status' ], 10, 3 );
 		add_action( 'deleted_post', [ __CLASS__, 'on_deleted_post' ], 10, 2 );
+		add_action( 'woocommerce_update_product', [ __CLASS__, 'on_woocommerce_product_update' ], 20, 1 );
+		add_action( 'woocommerce_product_set_stock', [ __CLASS__, 'on_woocommerce_product_stock_update' ], 20, 1 );
+		add_action( 'woocommerce_variation_set_stock', [ __CLASS__, 'on_woocommerce_variation_stock_update' ], 20, 1 );
 
 		// WP-Cron — runs every 5 minutes to process the queue
 		add_action( self::CRON_HOOK, [ __CLASS__, 'process_queue' ] );
@@ -68,6 +71,9 @@ class ACS_Sync_Manager {
 
 		if ( ACS_Content_Extractor::is_indexable( $post ) ) {
 			update_post_meta( $post_id, '_acs_chatbot_indexed', '0' );
+			if ( 'product' === $post->post_type ) {
+				ACS_Sync_Queue::enqueue( $post_id, 'product', 'upsert' );
+			}
 		} elseif ( ACS_Content_Extractor::is_currently_indexed( $post_id ) ) {
 			ACS_Sync_Queue::enqueue( $post_id, $post->post_type, 'delete' );
 			update_post_meta( $post_id, '_acs_chatbot_indexed', '0' );
@@ -95,6 +101,37 @@ class ACS_Sync_Manager {
 	 */
 	public static function on_deleted_post( int $post_id, WP_Post $post ): void {
 		ACS_Sync_Queue::enqueue( $post_id, $post->post_type, 'delete' );
+	}
+
+	/**
+	 * Queue product changes made through WooCommerce CRUD APIs.
+	 */
+	public static function on_woocommerce_product_update( int $product_id ): void {
+		self::queue_product_update( $product_id );
+	}
+
+	/** @param object $product WooCommerce product object. */
+	public static function on_woocommerce_product_stock_update( object $product ): void {
+		if ( method_exists( $product, 'get_id' ) ) {
+			self::queue_product_update( (int) $product->get_id() );
+		}
+	}
+
+	/** @param object $variation WooCommerce variation object. */
+	public static function on_woocommerce_variation_stock_update( object $variation ): void {
+		if ( method_exists( $variation, 'get_parent_id' ) ) {
+			self::queue_product_update( (int) $variation->get_parent_id() );
+		}
+	}
+
+	private static function queue_product_update( int $product_id ): void {
+		$post = $product_id > 0 ? get_post( $product_id ) : null;
+		if ( ! $post instanceof WP_Post || ! ACS_Content_Extractor::is_indexable( $post ) ) {
+			return;
+		}
+
+		update_post_meta( $product_id, '_acs_chatbot_indexed', '0' );
+		ACS_Sync_Queue::enqueue( $product_id, 'product', 'upsert' );
 	}
 
 	/**

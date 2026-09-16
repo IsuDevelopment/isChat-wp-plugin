@@ -22,10 +22,16 @@ class ACS_Content_Extractor {
 			return null;
 		}
 
-		$content = self::get_clean_content( $post );
+		$product_data = ACS_Extractor_WooCommerce::extract( $post );
+		$content      = $product_data['content'] ?? self::get_clean_content( $post );
 
 		if ( empty( trim( $content ) ) ) {
 			return null;
+		}
+
+		$metadata = self::get_source_metadata( $post );
+		if ( null !== $product_data ) {
+			$metadata = array_merge( $metadata, $product_data['metadata'] );
 		}
 
 		return [
@@ -35,10 +41,12 @@ class ACS_Content_Extractor {
 			'status'      => $post->post_status,
 			'title'       => get_the_title( $post ),
 			'url'         => get_permalink( $post ),
-			'source_metadata' => self::get_source_metadata( $post ),
+			'source_metadata' => $metadata,
 			'content'     => $content,
 			'language'    => self::get_language( $post ),
-			'hash'        => md5( $content ),
+			'hash'        => null === $product_data
+				? md5( $content )
+				: md5( (string) wp_json_encode( [ get_the_title( $post ), get_permalink( $post ), $content, $metadata ] ) ),
 		];
 	}
 

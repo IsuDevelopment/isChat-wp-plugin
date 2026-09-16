@@ -20,8 +20,10 @@ class ACS_Sync_Manager {
 		add_action( 'transition_post_status', [ __CLASS__, 'on_transition_status' ], 10, 3 );
 		add_action( 'deleted_post', [ __CLASS__, 'on_deleted_post' ], 10, 2 );
 		add_action( 'woocommerce_update_product', [ __CLASS__, 'on_woocommerce_product_update' ], 20, 1 );
+		add_action( 'woocommerce_update_product_variation', [ __CLASS__, 'on_woocommerce_product_variation_update' ], 20, 2 );
 		add_action( 'woocommerce_product_set_stock', [ __CLASS__, 'on_woocommerce_product_stock_update' ], 20, 1 );
 		add_action( 'woocommerce_variation_set_stock', [ __CLASS__, 'on_woocommerce_variation_stock_update' ], 20, 1 );
+		add_action( 'woocommerce_scheduled_sales', [ __CLASS__, 'on_woocommerce_scheduled_sales' ], 20 );
 
 		// WP-Cron — runs every 5 minutes to process the queue
 		add_action( self::CRON_HOOK, [ __CLASS__, 'process_queue' ] );
@@ -89,6 +91,13 @@ class ACS_Sync_Manager {
 		}
 
 		$deindex_statuses = [ 'trash', 'draft', 'private', 'pending' ];
+		if ( 'product_variation' === $post->post_type ) {
+			$parent_id = isset( $post->post_parent ) ? (int) $post->post_parent : 0;
+			if ( $parent_id > 0 ) {
+				self::queue_product_update( $parent_id );
+			}
+			return;
+		}
 
 		if ( in_array( $new_status, $deindex_statuses, true ) && $old_status === 'publish' ) {
 			ACS_Sync_Queue::enqueue( $post->ID, $post->post_type, 'delete' );
@@ -100,6 +109,14 @@ class ACS_Sync_Manager {
 	 * Remove from index when post is permanently deleted.
 	 */
 	public static function on_deleted_post( int $post_id, WP_Post $post ): void {
+		if ( 'product_variation' === $post->post_type ) {
+			$parent_id = isset( $post->post_parent ) ? (int) $post->post_parent : 0;
+			if ( $parent_id > 0 ) {
+				self::queue_product_update( $parent_id );
+			}
+			return;
+		}
+
 		ACS_Sync_Queue::enqueue( $post_id, $post->post_type, 'delete' );
 	}
 
@@ -107,13 +124,27 @@ class ACS_Sync_Manager {
 	 * Queue product changes made through WooCommerce CRUD APIs.
 	 */
 	public static function on_woocommerce_product_update( int $product_id ): void {
-		self::queue_product_update( $product_id );
+		self::queue_product_or_parent_update( $product_id );
+	}
+
+	/** Queue the variable parent after price, attribute or status changes. */
+	public static function on_woocommerce_product_variation_update( int $variation_id, int $parent_id = 0 ): void {
+		if ( $parent_id <= 0 ) {
+			$variation = function_exists( 'wc_get_product' ) ? wc_get_product( $variation_id ) : null;
+			$parent_id = is_object( $variation ) && method_exists( $variation, 'get_parent_id' )
+				? (int) $variation->get_parent_id()
+				: 0;
+		}
+
+		if ( $parent_id > 0 ) {
+			self::queue_product_update( $parent_id );
+		}
 	}
 
 	/** @param object $product WooCommerce product object. */
 	public static function on_woocommerce_product_stock_update( object $product ): void {
 		if ( method_exists( $product, 'get_id' ) ) {
-			self::queue_product_update( (int) $product->get_id() );
+			self::queue_product_or_parent_update( (int) $product->get_id() );
 		}
 	}
 
@@ -122,6 +153,46 @@ class ACS_Sync_Manager {
 		if ( method_exists( $variation, 'get_parent_id' ) ) {
 			self::queue_product_update( (int) $variation->get_parent_id() );
 		}
+	}
+
+	/**
+	 * Scheduled sales can start or end without changing the parent post timestamp.
+	 * Queue every opted-in published product; the queue deduplicates identities.
+	 */
+	public static function on_woocommerce_scheduled_sales(): void {
+		$page = 1;
+		do {
+			$product_ids = get_posts( [
+				'post_type'      => 'product',
+				'post_status'    => 'publish',
+				'posts_per_page' => 250,
+				'paged'          => $page,
+				'fields'         => 'ids',
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+				'no_found_rows'  => true,
+				'meta_key'       => '_acs_ai_index_enabled',
+				'meta_value'     => '1',
+			] );
+
+			foreach ( $product_ids as $product_id ) {
+				self::queue_product_update( (int) $product_id );
+			}
+			$page++;
+		} while ( 250 === count( $product_ids ) );
+	}
+
+	private static function queue_product_or_parent_update( int $product_id ): void {
+		$post = $product_id > 0 ? get_post( $product_id ) : null;
+		if ( $post instanceof WP_Post && 'product_variation' === $post->post_type ) {
+			$parent_id = isset( $post->post_parent ) ? (int) $post->post_parent : 0;
+			if ( $parent_id > 0 ) {
+				self::queue_product_update( $parent_id );
+			}
+			return;
+		}
+
+		self::queue_product_update( $product_id );
 	}
 
 	private static function queue_product_update( int $product_id ): void {

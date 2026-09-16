@@ -233,6 +233,16 @@ class ACS_Sync_Manager {
 				}
 
 				$data['site_id'] = $site_id;
+				if ( 'wp_product' === ( $data['source_type'] ?? '' ) ) {
+					$metadata = is_array( $data['source_metadata'] ?? null ) ? $data['source_metadata'] : [];
+					error_log( sprintf(
+						'ACS product sync snapshot: product_id=%d variations=%d complete=%s payload_bytes=%d',
+						(int) $job->post_id,
+						(int) ( $metadata['variation_count'] ?? 0 ),
+						false === ( $metadata['variations_complete'] ?? true ) ? 'no' : 'yes',
+						strlen( (string) wp_json_encode( $data ) )
+					) );
+				}
 				$result = $client->upsert_document( $data );
 			}
 

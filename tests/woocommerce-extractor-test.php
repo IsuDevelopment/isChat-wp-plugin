@@ -35,6 +35,7 @@ class ACS_Test_Product {
 	public function get_gallery_image_ids(): array { return [ 7523, 7524 ]; }
 	public function get_average_rating(): string { return '4.8'; }
 	public function get_review_count(): int { return 12; }
+	public function get_children(): array { return [ 9001, 9002 ]; }
 	public function get_attributes(): array {
 		return [
 			new ACS_Test_Attribute( 'pa_kolor', [], true ),
@@ -43,7 +44,38 @@ class ACS_Test_Product {
 	}
 }
 
-function wc_get_product( int $id ): ACS_Test_Product { return new ACS_Test_Product(); }
+class ACS_Test_Variation {
+	public function __construct(
+		private int $id,
+		private string $color,
+		private string $price,
+		private string $regular_price,
+		private string $sale_price,
+		private bool $on_sale
+	) {}
+	public function get_status(): string { return 'publish'; }
+	public function get_sku(): string { return 9001 === $this->id ? 'SCARLET-GREEN-40' : 'SCARLET-RED-40'; }
+	public function get_attributes(): array { return [ 'pa_kolor' => $this->color, 'pa_rozmiar' => '40' ]; }
+	public function get_price(): string { return $this->price; }
+	public function get_regular_price(): string { return $this->regular_price; }
+	public function get_sale_price(): string { return $this->sale_price; }
+	public function get_stock_status(): string { return 'instock'; }
+	public function get_stock_quantity(): ?int { return 2; }
+	public function is_purchasable(): bool { return true; }
+	public function is_on_sale(): bool { return $this->on_sale; }
+	public function get_image_id(): int { return 9001 === $this->id ? 9101 : 9102; }
+	public function get_permalink(): string { return 'https://example.com/product/scarlet?variation_id=' . $this->id; }
+}
+
+function wc_get_product( int $id ): object {
+	if ( 9001 === $id ) {
+		return new ACS_Test_Variation( 9001, 'zielony', '499.00', '499.00', '', false );
+	}
+	if ( 9002 === $id ) {
+		return new ACS_Test_Variation( 9002, 'czerwony', '399.00', '499.00', '399.00', true );
+	}
+	return new ACS_Test_Product();
+}
 function get_woocommerce_currency(): string { return 'PLN'; }
 function get_the_title( WP_Post $post ): string { return 'Sukienka Scarlet maxi'; }
 function wp_strip_all_tags( string $value ): string { return strip_tags( $value ); }
@@ -55,8 +87,15 @@ function wp_get_post_terms( int $id, string $taxonomy, array $args ): array {
 	return 'product_cat' === $taxonomy ? [ 'Sukienki', 'Na wesele' ] : [ 'bordo', 'maxi' ];
 }
 function wc_get_product_terms( int $id, string $taxonomy, array $args ): array { return [ 'bordo' ]; }
-function wc_attribute_label( string $name, object $product ): string { return 'pa_kolor' === $name ? 'Kolor' : $name; }
+function wc_attribute_label( string $name, object $product ): string {
+	return match ( $name ) {
+		'pa_kolor' => 'Kolor',
+		'pa_rozmiar' => 'Rozmiar',
+		default => $name,
+	};
+}
 function wp_get_attachment_image_url( int $id, string $size ): string { return 'https://example.com/image-' . $id . '.jpg'; }
+function taxonomy_exists( string $taxonomy ): bool { return false; }
 
 require dirname( __DIR__ ) . '/includes/class-acs-extractor-woocommerce.php';
 
@@ -92,6 +131,26 @@ foreach ( $expectations as $key => $value ) {
 
 if ( count( $metadata['gallery_image_urls'] ?? [] ) !== 2 ) {
 	throw new RuntimeException( 'Expected gallery image URLs.' );
+}
+
+$variations = $metadata['variations'] ?? [];
+if ( 2 !== count( $variations ) ) {
+	throw new RuntimeException( 'Expected two structured product variations.' );
+}
+
+$green = $variations[0];
+$red   = $variations[1];
+
+if ( true === ( $green['is_on_sale'] ?? null ) || '499.00' !== ( $green['price'] ?? null ) ) {
+	throw new RuntimeException( 'Green size 40 must retain its regular price and sale state.' );
+}
+
+if ( false === ( $red['is_on_sale'] ?? null ) || '399.00' !== ( $red['sale_price'] ?? null ) ) {
+	throw new RuntimeException( 'Red size 40 must retain its own promotional price and sale state.' );
+}
+
+if ( 'zielony' !== ( $green['attributes'][0]['value'] ?? null ) || 'czerwony' !== ( $red['attributes'][0]['value'] ?? null ) ) {
+	throw new RuntimeException( 'Variation attributes must stay attached to the correct price and sale state.' );
 }
 
 echo "WooCommerce extractor test passed.\n";

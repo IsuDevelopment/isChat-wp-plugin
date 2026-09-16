@@ -32,9 +32,16 @@ require dirname( __DIR__ ) . '/includes/class-acs-sync-manager.php';
 
 ACS_Sync_Manager::on_woocommerce_product_update( 7564 );
 ACS_Sync_Manager::on_woocommerce_variation_stock_update( new ACS_Test_Variation() );
+
+if ( ! method_exists( ACS_Sync_Manager::class, 'on_woocommerce_product_variation_update' ) ) {
+	throw new RuntimeException( 'Variation price and attribute updates must queue the parent product.' );
+}
+
+ACS_Sync_Manager::on_woocommerce_product_variation_update( 9001, 7564 );
 ACS_Sync_Manager::on_deleted_post( 7564, new WP_Post( 7564 ) );
 
 $expected = [
+	[ 'post_id' => 7564, 'post_type' => 'product', 'action' => 'upsert' ],
 	[ 'post_id' => 7564, 'post_type' => 'product', 'action' => 'upsert' ],
 	[ 'post_id' => 7564, 'post_type' => 'product', 'action' => 'upsert' ],
 	[ 'post_id' => 7564, 'post_type' => 'product', 'action' => 'delete' ],

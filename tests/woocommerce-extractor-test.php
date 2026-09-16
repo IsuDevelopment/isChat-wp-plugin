@@ -55,7 +55,13 @@ class ACS_Test_Variation {
 	) {}
 	public function get_status(): string { return 'publish'; }
 	public function get_sku(): string { return 9001 === $this->id ? 'SCARLET-GREEN-40' : 'SCARLET-RED-40'; }
-	public function get_attributes(): array { return [ 'pa_kolor' => $this->color, 'pa_rozmiar' => '40' ]; }
+	public function get_attributes(): array {
+		$attributes = [ 'pa_kolor' => $this->color, 'pa_rozmiar' => '40' ];
+		if ( 9001 === $this->id ) {
+			$attributes['Gwint'] = '14mm';
+		}
+		return $attributes;
+	}
 	public function get_price(): string { return $this->price; }
 	public function get_regular_price(): string { return $this->regular_price; }
 	public function get_sale_price(): string { return $this->sale_price; }
@@ -159,6 +165,10 @@ if ( false === ( $red['is_on_sale'] ?? null ) || '399.00' !== ( $red['sale_price
 
 if ( 'zielony' !== ( $green['attributes'][0]['value'] ?? null ) || 'czerwony' !== ( $red['attributes'][0]['value'] ?? null ) ) {
 	throw new RuntimeException( 'Variation attributes must stay attached to the correct price and sale state.' );
+}
+
+if ( 'Gwint' !== ( $green['attributes'][2]['name'] ?? null ) || '14mm' !== ( $green['attributes'][2]['value'] ?? null ) ) {
+	throw new RuntimeException( 'Custom WooCommerce attributes must remain searchable without a hardcoded name.' );
 }
 
 echo "WooCommerce extractor test passed.\n";

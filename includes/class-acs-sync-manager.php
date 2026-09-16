@@ -171,6 +171,111 @@ class ACS_Sync_Manager {
 	}
 
 	/**
+	 * Compare the complete local manifest with the backend and queue only the
+	 * required deletes/upserts. Manual and API documents are outside this scope.
+	 *
+	 * @return array{success: bool, message: string, queued: int, to_delete: int, to_reindex: int, up_to_date: int}
+	 */
+	public static function reconcile_full_sync(): array {
+		$manifest = self::build_full_sync_manifest();
+		$result   = self::make_client()->full_sync( $manifest );
+
+		if ( ! $result['success'] ) {
+			return [
+				'success'    => false,
+				'message'    => $result['message'],
+				'queued'     => 0,
+				'to_delete'  => 0,
+				'to_reindex' => 0,
+				'up_to_date' => 0,
+			];
+		}
+
+		$data       = is_array( $result['data'] ?? null ) ? $result['data'] : [];
+		$to_delete  = is_array( $data['to_delete'] ?? null ) ? $data['to_delete'] : [];
+		$to_reindex = is_array( $data['to_reindex'] ?? null ) ? $data['to_reindex'] : [];
+		$queued     = 0;
+
+		foreach ( $to_delete as $item ) {
+			$source_id   = isset( $item['source_id'] ) ? (string) $item['source_id'] : '';
+			$source_type = isset( $item['source_type'] ) ? (string) $item['source_type'] : '';
+			if ( ! ctype_digit( $source_id ) || ! str_starts_with( $source_type, 'wp_' ) ) {
+				continue;
+			}
+
+			ACS_Sync_Queue::enqueue( (int) $source_id, substr( $source_type, 3 ), 'delete' );
+			$queued++;
+		}
+
+		foreach ( $to_reindex as $item ) {
+			$source_id = isset( $item['source_id'] ) ? (string) $item['source_id'] : '';
+			if ( ! ctype_digit( $source_id ) ) {
+				continue;
+			}
+
+			$post = get_post( (int) $source_id );
+			if ( ! $post instanceof WP_Post || ! ACS_Content_Extractor::is_indexable( $post ) ) {
+				continue;
+			}
+
+			ACS_Sync_Queue::enqueue( $post->ID, $post->post_type, 'upsert' );
+			$queued++;
+		}
+
+		return [
+			'success'    => true,
+			'message'    => 'OK',
+			'queued'     => $queued,
+			'to_delete'  => count( $to_delete ),
+			'to_reindex' => count( $to_reindex ),
+			'up_to_date' => (int) ( $data['up_to_date'] ?? 0 ),
+		];
+	}
+
+	/**
+	 * @return array<int, array{source_type: string, source_id: string, hash: string}>
+	 */
+	private static function build_full_sync_manifest(): array {
+		$manifest = [];
+
+		foreach ( ACS_Content_Extractor::get_enabled_post_types() as $post_type ) {
+			$page = 1;
+			do {
+				$post_ids = get_posts( [
+					'post_type'              => $post_type,
+					'post_status'            => 'publish',
+					'posts_per_page'         => 250,
+					'paged'                  => $page,
+					'fields'                 => 'ids',
+					'orderby'                => 'ID',
+					'order'                  => 'ASC',
+					'no_found_rows'          => true,
+					'update_post_meta_cache' => true,
+					'update_post_term_cache' => false,
+				] );
+
+				foreach ( $post_ids as $post_id ) {
+					$post = get_post( (int) $post_id );
+					$data = $post instanceof WP_Post ? ACS_Content_Extractor::extract( $post ) : null;
+					if ( $data === null ) {
+						continue;
+					}
+
+					$manifest[] = [
+						'source_type' => (string) $data['source_type'],
+						'source_id'   => (string) $data['source_id'],
+						'hash'        => (string) $data['hash'],
+					];
+				}
+
+				$page++;
+			} while ( count( $post_ids ) === 250 );
+		}
+
+		return $manifest;
+	}
+
+	/**
 	 * Daily catch-up: queue enabled posts modified after their last successful index.
 	 * Catches posts missed when the plugin was inactive or sync failed.
 	 * Capped at 200 posts per run; the 5-min queue cron handles the rest.

@@ -54,6 +54,18 @@ class ACS_API_Client {
 	}
 
 	/**
+	 * Compare the complete local WordPress manifest with backend documents.
+	 *
+	 * @param array<int, array{source_type: string, source_id: string, hash: string}> $documents
+	 * @return array{success: bool, message: string, data?: mixed}
+	 */
+	public function full_sync( array $documents ): array {
+		return $this->request( 'POST', 'v1/sync/full', [
+			'documents' => array_values( $documents ),
+		] );
+	}
+
+	/**
 	 * Send HTTP request to the API.
 	 *
 	 * @param string               $method

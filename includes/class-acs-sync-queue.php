@@ -51,11 +51,13 @@ class ACS_Sync_Queue {
 
 		$table = $wpdb->prefix . self::TABLE_NAME;
 
-		// Remove any pending jobs for this post to avoid duplicates
+		// Keep identities separate when a post changes type: deleting the old
+		// wp_page and inserting the new wp_post are two different operations.
 		$wpdb->delete( $table, [
-			'post_id' => $post_id,
-			'status'  => 'pending',
-		], [ '%d', '%s' ] );
+			'post_id'   => $post_id,
+			'post_type' => $post_type,
+			'status'    => 'pending',
+		], [ '%d', '%s', '%s' ] );
 
 		$wpdb->insert( $table, [
 			'action'       => $action,

@@ -232,7 +232,7 @@ class ACS_Admin {
 			wp_send_json_error( [ 'message' => __( 'Plugin is not fully configured. Please check the Connection settings.', 'ai-ischat' ) ] );
 		}
 
-		// Verify connection and check document limits.
+		// Verify the API before building the complete manifest.
 		$client = ACS_Sync_Manager::make_client();
 		$verify = $client->verify();
 
@@ -240,26 +240,13 @@ class ACS_Admin {
 			wp_send_json_error( [ 'message' => $verify['message'] ] );
 		}
 
-		$verify_data = is_array( $verify['data'] ) ? $verify['data'] : [];
-		$usage       = isset( $verify_data['usage'] )  && is_array( $verify_data['usage'] )  ? $verify_data['usage']  : [];
-		$limits      = isset( $verify_data['limits'] ) && is_array( $verify_data['limits'] ) ? $verify_data['limits'] : [];
-
-		$doc_used = isset( $usage['documents'] )      ? (int) $usage['documents']       : 0;
-		$doc_max  = isset( $limits['max_documents'] ) ? (int) $limits['max_documents']  : 0;
-
-		if ( $doc_max > 0 && $doc_used >= $doc_max ) {
-			wp_send_json_error( [
-				'message' => sprintf(
-					/* translators: %1$d: current document count, %2$d: maximum allowed documents */
-					__( 'Document limit reached (%1$d / %2$d). Upgrade your plan to sync more content.', 'ai-ischat' ),
-					$doc_used,
-					$doc_max
-				),
-			] );
+		// Ask the backend for the delta, then run one inline batch for feedback.
+		$reconcile = ACS_Sync_Manager::reconcile_full_sync();
+		if ( ! $reconcile['success'] ) {
+			wp_send_json_error( [ 'message' => $reconcile['message'] ] );
 		}
 
-		// Enqueue everything, then run one inline batch for immediate feedback.
-		$queued       = ACS_Sync_Manager::enqueue_full_sync();
+		$queued       = $reconcile['queued'];
 		$stats_before = ACS_Sync_Queue::get_stats();
 
 		ACS_Sync_Manager::process_queue();
@@ -274,7 +261,7 @@ class ACS_Admin {
 			'failed'    => $failed,
 			'message'   => sprintf(
 				/* translators: %1$d: total posts queued, %2$d: posts processed in this batch */
-				__( 'Queued %1$d AI-enabled posts for sync. %2$d processed in this batch. Remaining items will be synced automatically in the background.', 'ai-ischat' ),
+				__( 'Compared all AI-enabled content: %1$d changes queued, %2$d processed now. Remaining items will sync automatically in the background.', 'ai-ischat' ),
 				$queued,
 				$processed
 			),

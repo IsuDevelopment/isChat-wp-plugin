@@ -1,6 +1,7 @@
 import { registerPlugin } from '@wordpress/plugins';
 import { PluginDocumentSettingPanel } from '@wordpress/editor';
-import { useSelect, useDispatch } from '@wordpress/data';
+import { useSelect } from '@wordpress/data';
+import { useEntityProp } from '@wordpress/core-data';
 import { store as editorStore } from '@wordpress/editor';
 import {
 	ToggleControl,
@@ -18,21 +19,27 @@ function AcsIndexPanel() {
 	const [ error, setError ] = useState( null );
 	const [ justIndexed, setJustIndexed ] = useState( false );
 
-	const { editPost } = useDispatch( editorStore );
-
-	const { meta, modified, postId, isSavingPost, postStatus, isDirty } = useSelect(
+	const { modified, postId, postType, isSavingPost, postStatus, isDirty } = useSelect(
 		( select ) => {
 			const s = select( editorStore );
 			return {
-				meta:         s.getEditedPostAttribute( 'meta' ) || {},
 				modified:     s.getEditedPostAttribute( 'modified' ),
 				postId:       s.getCurrentPostId(),
+				postType:     s.getCurrentPostType(),
 				isSavingPost: s.isSavingPost(),
 				postStatus:   s.getEditedPostAttribute( 'status' ),
 				isDirty:      s.isEditedPostDirty(),
 			};
 		}
 	);
+	const [ meta = {}, setMeta ] = useEntityProp(
+		'postType',
+		postType || 'post',
+		'meta',
+		postId
+	);
+
+	const updateMeta = ( patch ) => setMeta( { ...meta, ...patch } );
 
 	const isEnabled    = meta._acs_ai_index_enabled === '1';
 	const isIndexed    = meta._acs_chatbot_indexed === '1';
@@ -55,11 +62,9 @@ function AcsIndexPanel() {
 				path:   `/acs/v1/index-post/${ postId }`,
 				method: 'POST',
 			} );
-			editPost( {
-				meta: {
-					_acs_chatbot_indexed:  res.indexed,
-					_acs_last_indexed_at:  res.last_indexed_at,
-				},
+			updateMeta( {
+				_acs_chatbot_indexed: res.indexed,
+				_acs_last_indexed_at: res.last_indexed_at,
 			} );
 			setJustIndexed( true );
 		} catch ( e ) {
@@ -84,9 +89,7 @@ function AcsIndexPanel() {
 				label={ __( 'Index in IsChat', 'ai-ischat' ) }
 				checked={ isEnabled }
 				onChange={ ( val ) =>
-					editPost( {
-						meta: { _acs_ai_index_enabled: val ? '1' : '0' },
-					} )
+					updateMeta( { _acs_ai_index_enabled: val ? '1' : '0' } )
 				}
 			/>
 
@@ -100,9 +103,7 @@ function AcsIndexPanel() {
 						) }
 						value={ extraDesc }
 						onChange={ ( val ) =>
-							editPost( {
-								meta: { _acs_extra_description: val },
-							} )
+							updateMeta( { _acs_extra_description: val } )
 						}
 						rows={ 3 }
 					/>

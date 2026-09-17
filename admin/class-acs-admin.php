@@ -25,8 +25,6 @@ class ACS_Admin {
 		add_action( 'admin_post_acs_manual_index_post', [ __CLASS__, 'handle_manual_index_post' ] );
 		add_action( 'admin_notices', [ __CLASS__, 'render_manual_index_notice' ] );
 		add_action( 'init', [ __CLASS__, 'register_post_list_hooks' ] );
-		add_action( 'add_meta_boxes_product', [ __CLASS__, 'add_product_indexing_metabox' ] );
-		add_action( 'save_post_product', [ __CLASS__, 'save_product_indexing_metabox' ], 5, 2 );
 
 		// AJAX handlers (logged-in users only — no nopriv variant needed).
 		add_action( 'wp_ajax_acs_test_connection', [ __CLASS__, 'ajax_test_connection' ] );
@@ -175,57 +173,6 @@ class ACS_Admin {
 		echo $is_indexed
 			? '<span aria-label="' . esc_attr__( 'Indexed', 'ai-ischat' ) . '">✓</span>'
 			: '<span aria-label="' . esc_attr__( 'Not indexed', 'ai-ischat' ) . '">✕</span>';
-	}
-
-	/**
-	 * Add explicit per-product opt-in for WooCommerce's classic product editor.
-	 */
-	public static function add_product_indexing_metabox(): void {
-		if ( ! function_exists( 'wc_get_product' ) ) {
-			return;
-		}
-
-		add_meta_box(
-			'acs-product-indexing',
-			__( 'IsChat AI Indexing', 'ai-ischat' ),
-			[ __CLASS__, 'render_product_indexing_metabox' ],
-			'product',
-			'side',
-			'default'
-		);
-	}
-
-	public static function render_product_indexing_metabox( WP_Post $post ): void {
-		wp_nonce_field( 'acs_save_product_indexing_' . $post->ID, '_acs_product_indexing_nonce' );
-		?>
-		<label style="display: flex; gap: 8px; align-items: flex-start;">
-			<input type="checkbox" name="_acs_ai_index_enabled" value="1" <?php checked( ACS_Content_Extractor::is_ai_index_enabled( $post->ID ) ); ?> />
-			<span><?php esc_html_e( 'Index this product in IsChat', 'ai-ischat' ); ?></span>
-		</label>
-		<p class="description">
-			<?php esc_html_e( 'Syncs the description, price, availability, categories, tags, attributes and product images. The Product post type must also be enabled in IsChat → Content.', 'ai-ischat' ); ?>
-		</p>
-		<?php
-	}
-
-	/**
-	 * Save product indexing opt-in before the sync manager handles save_post.
-	 */
-	public static function save_product_indexing_metabox( int $post_id, WP_Post $post ): void {
-		if ( ! isset( $_POST['_acs_product_indexing_nonce'] ) ) {
-			return;
-		}
-
-		$nonce = sanitize_text_field( wp_unslash( $_POST['_acs_product_indexing_nonce'] ) );
-		if ( ! wp_verify_nonce( $nonce, 'acs_save_product_indexing_' . $post_id )
-			|| ! current_user_can( 'edit_post', $post_id )
-			|| wp_is_post_autosave( $post_id )
-			|| wp_is_post_revision( $post_id )
-		) {
-			return;
-		}
-
-		update_post_meta( $post_id, '_acs_ai_index_enabled', isset( $_POST['_acs_ai_index_enabled'] ) ? '1' : '0' );
 	}
 
 	// -------------------------------------------------------------------------

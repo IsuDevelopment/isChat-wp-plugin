@@ -70,6 +70,8 @@ jobs:
 
       - name: Create plugin ZIP
         run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          ARCHIVE="ai-ischat-${VERSION}.zip"
           mkdir -p /tmp/ai-ischat
           rsync -av \
             --exclude='.git' \
@@ -85,7 +87,9 @@ jobs:
             --exclude='.DS_Store' \
             . /tmp/ai-ischat/
           cd /tmp
-          zip -r ai-ischat.zip ai-ischat/
+          zip -r "${ARCHIVE}" ai-ischat/
+          unzip -t "${ARCHIVE}"
+          unzip -l "${ARCHIVE}" | grep -q 'ai-ischat/vendor/autoload.php'
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -96,11 +100,13 @@ jobs:
             ## IsChat WordPress Plugin v${{ steps.version.outputs.version }}
 
             ### Installation
-            1. Download `ai-ischat.zip` below
+            1. Download `ai-ischat-${{ steps.version.outputs.version }}.zip` below (do not use GitHub's Source code archives)
             2. Go to **Plugins → Add New → Upload Plugin**
             3. Upload the ZIP and activate
 
+            The archive name contains the version for local identification. Its internal folder remains `ai-ischat/` so WordPress updates the same plugin directory.
+
             ### Changelog
             See commit history for details.
-          files: /tmp/ai-ischat.zip
+          files: /tmp/ai-ischat-${{ steps.version.outputs.version }}.zip
           fail_on_unmatched_files: true

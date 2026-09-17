@@ -26,7 +26,22 @@ class ACS_API_Client {
 	 */
 	public function verify(): array {
 		$response = $this->request( 'GET', 'v1/sites/verify' );
+		if ( $response['success'] && class_exists( 'ACS_Product_Offers' ) ) {
+			$registration = $this->register_product_connector( ACS_Product_Offers::secret() );
+			if ( ! $registration['success'] ) {
+				return $registration;
+			}
+		}
 		return $response;
+	}
+
+	public function register_product_connector( string $secret ): array {
+		return $this->request( 'POST', 'v1/connectors/products/register', [
+			'connector'    => 'woocommerce',
+			'secret'       => $secret,
+			'capabilities' => [ 'offer_verification_v1' ],
+			'version'      => ACS_VERSION,
+		] );
 	}
 
 	/**

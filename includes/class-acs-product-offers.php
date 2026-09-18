@@ -12,6 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class ACS_Product_Offers {
 	private const ROUTE_PATH = '/wp-json/acs/v1/product-offers';
 	private const MAX_ITEMS  = 6;
+	private const MAX_VARIATIONS = 500;
 
 	public static function init(): void {
 		add_action( 'rest_api_init', [ __CLASS__, 'register_route' ] );
@@ -102,6 +103,8 @@ final class ACS_Product_Offers {
 	private static function resolve_offer( array $item ): array {
 		$product_id   = absint( $item['product_id'] ?? 0 );
 		$variation_id = absint( $item['variation_id'] ?? 0 );
+		$min_price    = is_numeric( $item['min_price'] ?? null ) ? max( 0.0, (float) $item['min_price'] ) : null;
+		$max_price    = is_numeric( $item['max_price'] ?? null ) ? max( 0.0, (float) $item['max_price'] ) : null;
 		$identity     = [ 'product_id' => $product_id, 'variation_id' => $variation_id ?: null ];
 		$parent       = $product_id ? wc_get_product( $product_id ) : false;
 		if ( ! $parent || 'publish' !== get_post_status( $product_id ) ) {
@@ -119,10 +122,105 @@ final class ACS_Product_Offers {
 			}
 		}
 
-		$price         = wc_get_price_to_display( $product, [ 'price' => (float) $product->get_price() ] );
-		$regular_price = wc_get_price_to_display( $product, [ 'price' => (float) $product->get_regular_price() ] );
+		$price          = wc_get_price_to_display( $product, [ 'price' => (float) $product->get_price() ] );
+		$price_max      = $price;
+		$regular_price  = wc_get_price_to_display( $product, [ 'price' => (float) $product->get_regular_price() ] );
 		$image_id      = (int) $product->get_image_id() ?: (int) $parent->get_image_id();
-		$attributes    = [];
+		$attributes     = self::variation_attributes( $product, $parent );
+		$stock_status   = sanitize_key( (string) $product->get_stock_status() );
+		$is_purchasable = (bool) $product->is_purchasable();
+		$is_on_sale     = (bool) $product->is_on_sale();
+
+		// Parent attributes contain every configured option. Product cards need
+		// only the concrete combinations that customers can purchase right now.
+		if ( ! $variation_id && 'variable' === (string) $parent->get_type() ) {
+			$variable       = self::variable_offer( $parent, $min_price, $max_price );
+			$price          = $variable['price'];
+			$price_max      = $variable['price_max'];
+			$regular_price  = $variable['regular_price'];
+			$attributes     = $variable['attributes'];
+			$stock_status   = $variable['stock_status'];
+			$is_purchasable = $variable['is_purchasable'];
+			$is_on_sale     = $variable['is_on_sale'];
+		}
+		if ( ( null !== $min_price && (float) $price < $min_price ) || ( null !== $max_price && (float) $price > $max_price ) ) {
+			return $identity + [ 'status' => 'no_match' ];
+		}
+
+		return $identity + [
+			'status'        => 'ok',
+			'product_type'  => sanitize_key( (string) $parent->get_type() ),
+			'price'         => wc_format_decimal( $price, wc_get_price_decimals() ),
+			'price_max'     => wc_format_decimal( $price_max, wc_get_price_decimals() ),
+			'regular_price' => wc_format_decimal( $regular_price, wc_get_price_decimals() ),
+			'currency'      => get_woocommerce_currency(),
+			'tax_display'   => get_option( 'woocommerce_tax_display_shop', 'incl' ) === 'excl' ? 'excl' : 'incl',
+			'is_on_sale'    => $is_on_sale,
+			'is_purchasable'=> $is_purchasable,
+			'stock_status'  => $stock_status,
+			'url'           => esc_url_raw( (string) $product->get_permalink() ),
+			'image_url'     => $image_id ? esc_url_raw( (string) wp_get_attachment_image_url( $image_id, 'medium' ) ) : null,
+			'attributes'    => array_slice( $attributes, 0, 3 ),
+		];
+	}
+
+	/** @return array{price: float, price_max: float, regular_price: float, attributes: array<int, array{label: string, value: string}>, stock_status: string, is_purchasable: bool, is_on_sale: bool} */
+	private static function variable_offer( object $parent, ?float $min_price = null, ?float $max_price = null ): array {
+		$prices = [];
+		$attributes = [];
+		$sale_regular_prices = [];
+
+		foreach ( array_slice( (array) $parent->get_children(), 0, self::MAX_VARIATIONS ) as $variation_id ) {
+			$variation = wc_get_product( (int) $variation_id );
+			if ( ! is_object( $variation ) || ( method_exists( $variation, 'get_status' ) && 'publish' !== $variation->get_status() ) ) {
+				continue;
+			}
+			if ( ! $variation->is_purchasable() || 'instock' !== (string) $variation->get_stock_status() || '' === (string) $variation->get_price() ) {
+				continue;
+			}
+
+			$current  = (float) wc_get_price_to_display( $variation, [ 'price' => (float) $variation->get_price() ] );
+			if ( ( null !== $min_price && $current < $min_price ) || ( null !== $max_price && $current > $max_price ) ) {
+				continue;
+			}
+			$prices[] = $current;
+			if ( $variation->is_on_sale() ) {
+				$regular = (float) wc_get_price_to_display( $variation, [ 'price' => (float) $variation->get_regular_price() ] );
+				if ( $regular > $current ) {
+					$sale_regular_prices[] = $regular;
+				}
+			}
+
+			foreach ( self::variation_attributes( $variation, $parent ) as $attribute ) {
+				$label = $attribute['label'];
+				$attributes[ $label ] = $attributes[ $label ] ?? [];
+				if ( ! in_array( $attribute['value'], $attributes[ $label ], true ) ) {
+					$attributes[ $label ][] = $attribute['value'];
+				}
+			}
+		}
+
+		$mapped_attributes = [];
+		foreach ( $attributes as $label => $values ) {
+			$mapped_attributes[] = [ 'label' => $label, 'value' => implode( ', ', $values ) ];
+		}
+
+		return [
+			'price'          => [] !== $prices ? min( $prices ) : 0.0,
+			'price_max'      => [] !== $prices ? max( $prices ) : 0.0,
+			// A crossed-out regular price is only truthful when the aggregate contains
+			// one concrete price. Mixed variation ranges have no single regular price.
+			'regular_price'  => 1 === count( $prices ) && [] !== $sale_regular_prices ? min( $sale_regular_prices ) : 0.0,
+			'attributes'     => array_slice( $mapped_attributes, 0, 3 ),
+			'stock_status'   => [] !== $prices ? 'instock' : 'outofstock',
+			'is_purchasable' => [] !== $prices,
+			'is_on_sale'     => [] !== $sale_regular_prices,
+		];
+	}
+
+	/** @return array<int, array{label: string, value: string}> */
+	private static function variation_attributes( object $product, object $parent ): array {
+		$attributes = [];
 		foreach ( (array) $product->get_attributes() as $name => $value ) {
 			if ( is_object( $value ) ) {
 				continue;
@@ -132,20 +230,7 @@ final class ACS_Product_Offers {
 			$attributes[] = [ 'label' => sanitize_text_field( (string) $label ), 'value' => sanitize_text_field( $term && isset( $term->name ) ? (string) $term->name : (string) $value ) ];
 		}
 
-		return $identity + [
-			'status'        => 'ok',
-			'product_type'  => sanitize_key( (string) $parent->get_type() ),
-			'price'         => wc_format_decimal( $price, wc_get_price_decimals() ),
-			'regular_price' => wc_format_decimal( $regular_price, wc_get_price_decimals() ),
-			'currency'      => get_woocommerce_currency(),
-			'tax_display'   => get_option( 'woocommerce_tax_display_shop', 'incl' ) === 'excl' ? 'excl' : 'incl',
-			'is_on_sale'    => (bool) $product->is_on_sale(),
-			'is_purchasable'=> (bool) $product->is_purchasable(),
-			'stock_status'  => sanitize_key( (string) $product->get_stock_status() ),
-			'url'           => esc_url_raw( (string) $product->get_permalink() ),
-			'image_url'     => $image_id ? esc_url_raw( (string) wp_get_attachment_image_url( $image_id, 'medium' ) ) : null,
-			'attributes'    => array_slice( $attributes, 0, 3 ),
-		];
+		return $attributes;
 	}
 }
 

@@ -23,6 +23,7 @@ class ACS_Admin {
 		add_action( 'admin_menu', [ __CLASS__, 'add_admin_page' ] );
 		add_action( 'admin_init', [ __CLASS__, 'register_settings' ] );
 		add_action( 'admin_post_acs_manual_index_post', [ __CLASS__, 'handle_manual_index_post' ] );
+		add_action( 'admin_post_acs_toggle_ai_indexing', [ __CLASS__, 'handle_toggle_ai_indexing' ] );
 		add_action( 'admin_notices', [ __CLASS__, 'render_manual_index_notice' ] );
 		add_action( 'init', [ __CLASS__, 'register_post_list_hooks' ] );
 
@@ -147,6 +148,8 @@ class ACS_Admin {
 		foreach ( $post_types as $post_type ) {
 			add_filter( "manage_{$post_type}_posts_columns", [ __CLASS__, 'add_indexed_posts_column' ] );
 			add_action( "manage_{$post_type}_posts_custom_column", [ __CLASS__, 'render_indexed_posts_column' ], 10, 2 );
+			add_filter( "bulk_actions-edit-{$post_type}", [ __CLASS__, 'add_indexing_bulk_actions' ] );
+			add_filter( "handle_bulk_actions-edit-{$post_type}", [ __CLASS__, 'handle_indexing_bulk_actions' ], 10, 3 );
 		}
 	}
 
@@ -157,7 +160,7 @@ class ACS_Admin {
 	 * @return array<string, string>
 	 */
 	public static function add_indexed_posts_column( array $columns ): array {
-		$columns['acs_chatbot_indexed'] = __( 'Chatbot Indexed', 'ai-ischat' );
+		$columns['acs_chatbot_indexed'] = __( 'AI Indexing', 'ai-ischat' );
 		return $columns;
 	}
 
@@ -169,10 +172,89 @@ class ACS_Admin {
 			return;
 		}
 
+		$post = get_post( $post_id );
+		if ( ! $post instanceof WP_Post || ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+
+		$enabled    = ACS_Content_Extractor::is_ai_index_enabled( $post_id );
 		$is_indexed = ACS_Content_Extractor::is_currently_indexed( $post_id );
-		echo $is_indexed
-			? '<span aria-label="' . esc_attr__( 'Indexed', 'ai-ischat' ) . '">✓</span>'
-			: '<span aria-label="' . esc_attr__( 'Not indexed', 'ai-ischat' ) . '">✕</span>';
+		$status     = $is_indexed
+			? __( 'Indexed', 'ai-ischat' )
+			: ( $enabled ? __( 'Sync pending', 'ai-ischat' ) : __( 'Disabled', 'ai-ischat' ) );
+		$redirect   = self::current_list_url();
+
+		echo '<div class="acs-indexing-list-actions">';
+		printf(
+			'<strong>%s</strong><br>',
+			esc_html( $status )
+		);
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block;margin:4px 6px 0 0">';
+		echo '<input type="hidden" name="action" value="acs_toggle_ai_indexing">';
+		echo '<input type="hidden" name="post_id" value="' . esc_attr( (string) $post_id ) . '">';
+		echo '<input type="hidden" name="enabled" value="' . esc_attr( $enabled ? '0' : '1' ) . '">';
+		echo '<input type="hidden" name="redirect_to" value="' . esc_url( $redirect ) . '">';
+		wp_nonce_field( 'acs_toggle_ai_indexing_' . $post_id );
+		printf(
+			'<button type="submit" class="button button-small">%s</button>',
+			esc_html( $enabled ? __( 'Disable', 'ai-ischat' ) : __( 'Enable', 'ai-ischat' ) )
+		);
+		echo '</form>';
+
+		if ( $enabled && 'publish' === $post->post_status && ACS_Sync_Manager::is_configured() ) {
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block;margin-top:4px">';
+			echo '<input type="hidden" name="action" value="acs_manual_index_post">';
+			echo '<input type="hidden" name="post_id" value="' . esc_attr( (string) $post_id ) . '">';
+			echo '<input type="hidden" name="redirect_to" value="' . esc_url( $redirect ) . '">';
+			wp_nonce_field( 'acs_manual_index_post_' . $post_id, '_acs_manual_index_nonce' );
+			printf(
+				'<button type="submit" class="button button-small">%s</button>',
+				esc_html__( 'Force sync', 'ai-ischat' )
+			);
+			echo '</form>';
+		}
+		echo '</div>';
+	}
+
+	/** Add scalable list-table actions for large content libraries. */
+	public static function add_indexing_bulk_actions( array $actions ): array {
+		$actions['acs_enable_ai_indexing']  = __( 'Enable IsChat AI Indexing', 'ai-ischat' );
+		$actions['acs_disable_ai_indexing'] = __( 'Disable IsChat AI Indexing', 'ai-ischat' );
+		$actions['acs_force_sync']          = __( 'Queue IsChat force sync', 'ai-ischat' );
+
+		return $actions;
+	}
+
+	/** Apply AI-indexing bulk actions with per-post capability checks. */
+	public static function handle_indexing_bulk_actions( string $redirect_url, string $action, array $post_ids ): string {
+		$allowed_actions = [ 'acs_enable_ai_indexing', 'acs_disable_ai_indexing', 'acs_force_sync' ];
+		if ( ! in_array( $action, $allowed_actions, true ) ) {
+			return $redirect_url;
+		}
+
+		$changed = 0;
+		foreach ( array_map( 'absint', $post_ids ) as $post_id ) {
+			$post = get_post( $post_id );
+			if ( ! $post instanceof WP_Post || ! current_user_can( 'edit_post', $post_id ) ) {
+				continue;
+			}
+
+			if ( 'acs_force_sync' === $action ) {
+				$changed += ACS_Sync_Manager::queue_post_for_reindex( $post ) ? 1 : 0;
+				continue;
+			}
+
+			ACS_Sync_Manager::apply_indexing_preference( $post, 'acs_enable_ai_indexing' === $action );
+			$changed++;
+		}
+
+		return add_query_arg(
+			[
+				'acs_bulk_indexing_action' => $action,
+				'acs_bulk_indexing_count'  => $changed,
+			],
+			$redirect_url
+		);
 	}
 
 	// -------------------------------------------------------------------------
@@ -395,21 +477,83 @@ class ACS_Admin {
 		}
 
 		$result = ACS_Sync_Manager::index_post_now( $post );
-		$args   = [
-			'post'                 => $post_id,
-			'action'               => 'edit',
+		$args = [
 			'acs_manual_index'     => $result['success'] ? 'success' : 'error',
 			'acs_manual_index_msg' => rawurlencode( $result['message'] ),
 		];
+		$fallback_url = add_query_arg( [ 'post' => $post_id, 'action' => 'edit' ], admin_url( 'post.php' ) );
+		$redirect_url = isset( $_POST['redirect_to'] )
+			? wp_validate_redirect( esc_url_raw( wp_unslash( $_POST['redirect_to'] ) ), $fallback_url )
+			: $fallback_url;
 
-		wp_safe_redirect( add_query_arg( $args, admin_url( 'post.php' ) ) );
+		wp_safe_redirect( add_query_arg( $args, $redirect_url ) );
 		exit;
+	}
+
+	/** Toggle AI indexing from a post list row and queue the matching sync action. */
+	public static function handle_toggle_ai_indexing(): void {
+		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
+		$post    = $post_id ? get_post( $post_id ) : null;
+
+		if ( ! $post instanceof WP_Post || ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'ai-ischat' ) );
+		}
+
+		check_admin_referer( 'acs_toggle_ai_indexing_' . $post_id );
+		$enabled = isset( $_POST['enabled'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['enabled'] ) );
+		ACS_Sync_Manager::apply_indexing_preference( $post, $enabled );
+
+		$fallback_url = admin_url( 'edit.php?post_type=' . $post->post_type );
+		$redirect_url = isset( $_POST['redirect_to'] )
+			? wp_validate_redirect( esc_url_raw( wp_unslash( $_POST['redirect_to'] ) ), $fallback_url )
+			: $fallback_url;
+		$message = $enabled
+			? __( 'AI indexing enabled and sync queued.', 'ai-ischat' )
+			: __( 'AI indexing disabled and removal from the index queued.', 'ai-ischat' );
+
+		wp_safe_redirect( add_query_arg( [
+			'acs_manual_index'     => 'success',
+			'acs_manual_index_msg' => rawurlencode( $message ),
+		], $redirect_url ) );
+		exit;
+	}
+
+	/** Return the current post-list URL without transient plugin notices. */
+	private static function current_list_url(): string {
+		$args = [];
+		if ( isset( $_GET['post_type'] ) ) {
+			$args['post_type'] = sanitize_key( wp_unslash( $_GET['post_type'] ) );
+		}
+		if ( isset( $_GET['paged'] ) ) {
+			$args['paged'] = absint( $_GET['paged'] );
+		}
+		if ( isset( $_GET['s'] ) ) {
+			$args['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
+		}
+		$url = add_query_arg( $args, admin_url( 'edit.php' ) );
+
+		return remove_query_arg(
+			[ 'acs_manual_index', 'acs_manual_index_msg', 'acs_bulk_indexing_action', 'acs_bulk_indexing_count' ],
+			$url
+		);
 	}
 
 	/**
 	 * Render result notice after manual indexing.
 	 */
 	public static function render_manual_index_notice(): void {
+		if ( is_admin() && isset( $_GET['acs_bulk_indexing_count'] ) ) {
+			$count = absint( $_GET['acs_bulk_indexing_count'] );
+			printf(
+				'<div class="notice notice-success is-dismissible"><p>%s</p></div>',
+				esc_html( sprintf(
+					/* translators: %d: number of posts updated or queued */
+					_n( '%d item updated.', '%d items updated.', $count, 'ai-ischat' ),
+					$count
+				) )
+			);
+		}
+
 		if ( ! is_admin() || ! isset( $_GET['acs_manual_index'], $_GET['acs_manual_index_msg'] ) ) {
 			return;
 		}

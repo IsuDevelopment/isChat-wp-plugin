@@ -206,6 +206,36 @@ class ACS_Sync_Manager {
 	}
 
 	/**
+	 * Apply an AI-indexing preference changed outside the post editor.
+	 *
+	 * Enabling queues a fresh snapshot. Disabling replaces any pending upsert
+	 * with an idempotent delete so stale content cannot remain in the index.
+	 */
+	public static function apply_indexing_preference( WP_Post $post, bool $enabled ): void {
+		update_post_meta( $post->ID, '_acs_ai_index_enabled', $enabled ? '1' : '0' );
+		update_post_meta( $post->ID, '_acs_chatbot_indexed', '0' );
+
+		if ( $enabled && ACS_Content_Extractor::is_indexable( $post ) ) {
+			ACS_Sync_Queue::enqueue( $post->ID, $post->post_type, 'upsert' );
+			return;
+		}
+
+		ACS_Sync_Queue::enqueue( $post->ID, $post->post_type, 'delete' );
+	}
+
+	/** Queue a selected post for a fresh background sync. */
+	public static function queue_post_for_reindex( WP_Post $post ): bool {
+		if ( ! ACS_Content_Extractor::is_indexable( $post ) ) {
+			return false;
+		}
+
+		update_post_meta( $post->ID, '_acs_chatbot_indexed', '0' );
+		ACS_Sync_Queue::enqueue( $post->ID, $post->post_type, 'upsert' );
+
+		return true;
+	}
+
+	/**
 	 * Process pending sync queue — called by WP-Cron.
 	 * Can also be triggered manually (admin sync all button).
 	 */

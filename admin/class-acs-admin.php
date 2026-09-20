@@ -26,11 +26,13 @@ class ACS_Admin {
 		add_action( 'admin_post_acs_toggle_ai_indexing', [ __CLASS__, 'handle_toggle_ai_indexing' ] );
 		add_action( 'admin_notices', [ __CLASS__, 'render_manual_index_notice' ] );
 		add_action( 'init', [ __CLASS__, 'register_post_list_hooks' ] );
+		add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_post_list_assets' ] );
 
 		// AJAX handlers (logged-in users only — no nopriv variant needed).
 		add_action( 'wp_ajax_acs_test_connection', [ __CLASS__, 'ajax_test_connection' ] );
 		add_action( 'wp_ajax_acs_sync_all',        [ __CLASS__, 'ajax_sync_all' ] );
 		add_action( 'wp_ajax_acs_save_manual_kb',  [ __CLASS__, 'ajax_save_manual_kb' ] );
+		add_action( 'wp_ajax_acs_indexing_list_action', [ __CLASS__, 'ajax_indexing_list_action' ] );
 
 		// Frontend widget injection.
 		add_action( 'wp_footer', [ __CLASS__, 'inject_widget' ] );
@@ -164,6 +166,41 @@ class ACS_Admin {
 		return $columns;
 	}
 
+	/** Enqueue the no-reload indexing controls only on post list screens. */
+	public static function enqueue_post_list_assets( string $hook_suffix ): void {
+		if ( 'edit.php' !== $hook_suffix ) {
+			return;
+		}
+
+		$script_path = ACS_PLUGIN_DIR . 'assets/js/indexing-list.js';
+		$style_path  = ACS_PLUGIN_DIR . 'assets/css/indexing-list.css';
+		$version     = defined( 'ACS_VERSION' ) ? (string) ACS_VERSION : '1.0.0';
+
+		wp_enqueue_script(
+			'acs-indexing-list',
+			ACS_PLUGIN_URL . 'assets/js/indexing-list.js',
+			[],
+			is_file( $script_path ) ? (string) filemtime( $script_path ) : $version,
+			true
+		);
+		wp_enqueue_style(
+			'acs-indexing-list',
+			ACS_PLUGIN_URL . 'assets/css/indexing-list.css',
+			[ 'dashicons' ],
+			is_file( $style_path ) ? (string) filemtime( $style_path ) : $version
+		);
+		wp_localize_script( 'acs-indexing-list', 'acsIndexingList', [
+			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+			'nonce'   => wp_create_nonce( 'acs_indexing_list_nonce' ),
+			'i18n'    => [
+				'enable'       => __( 'Enable AI indexing', 'ai-ischat' ),
+				'disable'      => __( 'Disable AI indexing', 'ai-ischat' ),
+				'forceSync'    => __( 'Queue force sync', 'ai-ischat' ),
+				'requestError' => __( 'The indexing action failed. Please try again.', 'ai-ischat' ),
+			],
+		] );
+	}
+
 	/**
 	 * Render "Chatbot Indexed" column content.
 	 */
@@ -177,43 +214,74 @@ class ACS_Admin {
 			return;
 		}
 
-		$enabled    = ACS_Content_Extractor::is_ai_index_enabled( $post_id );
-		$is_indexed = ACS_Content_Extractor::is_currently_indexed( $post_id );
-		$status     = $is_indexed
-			? __( 'Indexed', 'ai-ischat' )
-			: ( $enabled ? __( 'Sync pending', 'ai-ischat' ) : __( 'Disabled', 'ai-ischat' ) );
-		$redirect   = self::current_list_url();
+		$state = self::indexing_list_state( $post );
 
-		echo '<div class="acs-indexing-list-actions">';
 		printf(
-			'<strong>%s</strong><br>',
-			esc_html( $status )
+			'<div class="acs-indexing-list-actions" data-post-id="%1$d" data-enabled="%2$s">',
+			(int) $post_id,
+			esc_attr( $state['enabled'] ? '1' : '0' )
 		);
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block;margin:4px 6px 0 0">';
-		echo '<input type="hidden" name="action" value="acs_toggle_ai_indexing">';
-		echo '<input type="hidden" name="post_id" value="' . esc_attr( (string) $post_id ) . '">';
-		echo '<input type="hidden" name="enabled" value="' . esc_attr( $enabled ? '0' : '1' ) . '">';
-		echo '<input type="hidden" name="redirect_to" value="' . esc_url( $redirect ) . '">';
-		wp_nonce_field( 'acs_toggle_ai_indexing_' . $post_id );
+		echo '<div class="acs-indexing-list-controls">';
 		printf(
-			'<button type="submit" class="button button-small">%s</button>',
-			esc_html( $enabled ? __( 'Disable', 'ai-ischat' ) : __( 'Enable', 'ai-ischat' ) )
+			'<label class="acs-indexing-toggle" title="%1$s"><span class="screen-reader-text">%1$s</span><input type="checkbox" class="acs-indexing-toggle-input" %2$s></label>',
+			esc_attr( $state['enabled'] ? __( 'Disable AI indexing', 'ai-ischat' ) : __( 'Enable AI indexing', 'ai-ischat' ) ),
+			checked( $state['enabled'], true, false )
 		);
-		echo '</form>';
-
-		if ( $enabled && 'publish' === $post->post_status && ACS_Sync_Manager::is_configured() ) {
-			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block;margin-top:4px">';
-			echo '<input type="hidden" name="action" value="acs_manual_index_post">';
-			echo '<input type="hidden" name="post_id" value="' . esc_attr( (string) $post_id ) . '">';
-			echo '<input type="hidden" name="redirect_to" value="' . esc_url( $redirect ) . '">';
-			wp_nonce_field( 'acs_manual_index_post_' . $post_id, '_acs_manual_index_nonce' );
-			printf(
-				'<button type="submit" class="button button-small">%s</button>',
-				esc_html__( 'Force sync', 'ai-ischat' )
-			);
-			echo '</form>';
-		}
+		printf(
+			'<button type="button" class="button-link acs-force-sync%1$s" title="%2$s" aria-label="%2$s" data-available="%3$s" %4$s><span class="dashicons dashicons-update-alt" aria-hidden="true"></span></button>',
+			$state['enabled'] ? '' : ' is-hidden',
+			esc_attr__( 'Queue force sync', 'ai-ischat' ),
+			esc_attr( $state['can_force_sync'] ? '1' : '0' ),
+			$state['can_force_sync'] ? '' : 'disabled'
+		);
+		echo '<span class="spinner" aria-hidden="true"></span>';
 		echo '</div>';
+		printf(
+			'<small class="acs-indexing-status" data-state="%1$s">%2$s</small>',
+			esc_attr( $state['status'] ),
+			esc_html( $state['status_label'] )
+		);
+		printf(
+			'<small class="acs-indexing-date">%s</small>',
+			esc_html( $state['last_indexed_label'] )
+		);
+		echo '<span class="acs-indexing-feedback screen-reader-text" aria-live="polite"></span>';
+		echo '</div>';
+	}
+
+	/** Return the canonical display state for one list-table row. */
+	private static function indexing_list_state( WP_Post $post ): array {
+		$enabled         = ACS_Content_Extractor::is_ai_index_enabled( $post->ID );
+		$is_indexed      = ACS_Content_Extractor::is_currently_indexed( $post->ID );
+		$last_indexed_at = ACS_Content_Extractor::get_last_indexed_at( $post->ID );
+		$status          = $is_indexed ? 'indexed' : ( $enabled ? 'pending' : 'disabled' );
+		$status_labels   = [
+			'indexed'  => __( 'Indexed', 'ai-ischat' ),
+			'pending'  => __( 'Sync pending', 'ai-ischat' ),
+			'disabled' => __( 'Disabled', 'ai-ischat' ),
+		];
+		$last_label = __( 'Never synced', 'ai-ischat' );
+		if ( '' !== $last_indexed_at ) {
+			$formatted = mysql2date(
+				get_option( 'date_format' ) . ' ' . get_option( 'time_format' ),
+				$last_indexed_at
+			);
+			$last_label = sprintf(
+				/* translators: %s: localized date and time of the last successful sync */
+				__( 'Last sync: %s', 'ai-ischat' ),
+				$formatted
+			);
+		}
+
+		return [
+			'enabled'            => $enabled,
+			'indexed'            => $is_indexed,
+			'status'             => $status,
+			'status_label'       => $status_labels[ $status ],
+			'last_indexed_at'    => $last_indexed_at,
+			'last_indexed_label' => $last_label,
+			'can_force_sync'     => $enabled && 'publish' === $post->post_status && ACS_Sync_Manager::is_configured(),
+		];
 	}
 
 	/** Add scalable list-table actions for large content libraries. */
@@ -347,6 +415,43 @@ class ACS_Admin {
 				$queued,
 				$processed
 			),
+		] );
+	}
+
+	/** Toggle indexing or queue a force sync from a list-table row. */
+	public static function ajax_indexing_list_action(): void {
+		check_ajax_referer( 'acs_indexing_list_nonce', 'nonce' );
+
+		$post_id   = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
+		$post      = $post_id > 0 ? get_post( $post_id ) : null;
+		$operation = isset( $_POST['operation'] ) ? sanitize_key( wp_unslash( $_POST['operation'] ) ) : '';
+
+		if ( ! $post instanceof WP_Post || ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_send_json_error( [ 'message' => __( 'Permission denied.', 'ai-ischat' ) ], 403 );
+		}
+
+		if ( 'toggle' === $operation ) {
+			$enabled = isset( $_POST['enabled'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['enabled'] ) );
+			ACS_Sync_Manager::apply_indexing_preference( $post, $enabled );
+			$message = $enabled
+				? __( 'AI indexing enabled. Sync queued.', 'ai-ischat' )
+				: __( 'AI indexing disabled. Removal queued.', 'ai-ischat' );
+		} elseif ( 'force_sync' === $operation ) {
+			if ( ! ACS_Content_Extractor::is_ai_index_enabled( $post_id ) ) {
+				wp_send_json_error( [ 'message' => __( 'Enable AI indexing before forcing a sync.', 'ai-ischat' ) ], 409 );
+			}
+			$result = ACS_Sync_Manager::index_post_now( $post );
+			if ( ! $result['success'] ) {
+				wp_send_json_error( [ 'message' => $result['message'] ], 409 );
+			}
+			$message = __( 'Force sync completed.', 'ai-ischat' );
+		} else {
+			wp_send_json_error( [ 'message' => __( 'Invalid indexing action.', 'ai-ischat' ) ], 400 );
+		}
+
+		wp_send_json_success( [
+			'message' => $message,
+			'state'   => self::indexing_list_state( $post ),
 		] );
 	}
 

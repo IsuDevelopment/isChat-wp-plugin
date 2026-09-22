@@ -39,7 +39,7 @@ class ACS_API_Client {
 		return $this->request( 'POST', 'v1/connectors/products/register', [
 			'connector'    => 'woocommerce',
 			'secret'       => $secret,
-			'capabilities' => [ 'offer_verification_v1' ],
+			'capabilities' => [ 'offer_verification_v1', 'offer_verification_v2' ],
 			'version'      => ACS_VERSION,
 		] );
 	}

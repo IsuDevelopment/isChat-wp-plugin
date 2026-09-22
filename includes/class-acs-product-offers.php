@@ -13,6 +13,9 @@ final class ACS_Product_Offers {
 	private const ROUTE_PATH = '/wp-json/acs/v1/product-offers';
 	private const MAX_ITEMS  = 6;
 	private const MAX_VARIATIONS = 500;
+	// Offered to the customer as a picker, so bounded far below MAX_VARIATIONS:
+	// past a couple of dozen options a dropdown stops being a choice.
+	private const MAX_OFFERED_VARIANTS = 20;
 
 	public static function init(): void {
 		add_action( 'rest_api_init', [ __CLASS__, 'register_route' ] );
@@ -130,6 +133,7 @@ final class ACS_Product_Offers {
 		$stock_status   = sanitize_key( (string) $product->get_stock_status() );
 		$is_purchasable = (bool) $product->is_purchasable();
 		$is_on_sale     = (bool) $product->is_on_sale();
+		$variants       = [];
 
 		// Parent attributes contain every configured option. Product cards need
 		// only the concrete combinations that customers can purchase right now.
@@ -142,6 +146,7 @@ final class ACS_Product_Offers {
 			$stock_status   = $variable['stock_status'];
 			$is_purchasable = $variable['is_purchasable'];
 			$is_on_sale     = $variable['is_on_sale'];
+			$variants       = $variable['variants'];
 		}
 		if ( ( null !== $min_price && (float) $price < $min_price ) || ( null !== $max_price && (float) $price > $max_price ) ) {
 			return $identity + [ 'status' => 'no_match' ];
@@ -161,13 +166,22 @@ final class ACS_Product_Offers {
 			'url'           => esc_url_raw( (string) $product->get_permalink() ),
 			'image_url'     => $image_id ? esc_url_raw( (string) wp_get_attachment_image_url( $image_id, 'medium' ) ) : null,
 			'attributes'    => array_slice( $attributes, 0, 3 ),
+			// Only a parent offer carries these; a request for one variation is
+			// already as concrete as it gets.
+			'variants'      => $variants,
 		];
 	}
 
-	/** @return array{price: float, price_max: float, regular_price: float, attributes: array<int, array{label: string, value: string}>, stock_status: string, is_purchasable: bool, is_on_sale: bool} */
+	/**
+	 * The aggregate offer for a variable parent, plus the concrete purchasable
+	 * variants behind it so the card can offer a picker instead of a range.
+	 *
+	 * @return array{price: float, price_max: float, regular_price: float, attributes: array<int, array{label: string, value: string}>, variants: array<int, array<string, mixed>>, stock_status: string, is_purchasable: bool, is_on_sale: bool}
+	 */
 	private static function variable_offer( object $parent, ?float $min_price = null, ?float $max_price = null ): array {
 		$prices = [];
 		$attributes = [];
+		$variants = [];
 		$sale_regular_prices = [];
 
 		foreach ( array_slice( (array) $parent->get_children(), 0, self::MAX_VARIATIONS ) as $variation_id ) {
@@ -184,6 +198,22 @@ final class ACS_Product_Offers {
 				continue;
 			}
 			$prices[] = $current;
+			$variant_attributes = self::variation_attributes( $variation, $parent );
+			if ( count( $variants ) < self::MAX_OFFERED_VARIANTS ) {
+				$variant_image = (int) $variation->get_image_id();
+				$variants[] = [
+					'variation_id'  => (int) $variation_id,
+					'label'         => implode( ' / ', array_column( $variant_attributes, 'value' ) ),
+					'attributes'    => array_slice( $variant_attributes, 0, 3 ),
+					'price'         => wc_format_decimal( $current, wc_get_price_decimals() ),
+					'regular_price' => $variation->is_on_sale()
+						? wc_format_decimal( (float) wc_get_price_to_display( $variation, [ 'price' => (float) $variation->get_regular_price() ] ), wc_get_price_decimals() )
+						: null,
+					'stock_status'  => 'instock',
+					'url'           => esc_url_raw( (string) $variation->get_permalink() ),
+					'image_url'     => $variant_image ? esc_url_raw( (string) wp_get_attachment_image_url( $variant_image, 'medium' ) ) : null,
+				];
+			}
 			if ( $variation->is_on_sale() ) {
 				$regular = (float) wc_get_price_to_display( $variation, [ 'price' => (float) $variation->get_regular_price() ] );
 				if ( $regular > $current ) {
@@ -191,7 +221,7 @@ final class ACS_Product_Offers {
 				}
 			}
 
-			foreach ( self::variation_attributes( $variation, $parent ) as $attribute ) {
+			foreach ( $variant_attributes as $attribute ) {
 				$label = $attribute['label'];
 				$attributes[ $label ] = $attributes[ $label ] ?? [];
 				if ( ! in_array( $attribute['value'], $attributes[ $label ], true ) ) {
@@ -212,6 +242,7 @@ final class ACS_Product_Offers {
 			// one concrete price. Mixed variation ranges have no single regular price.
 			'regular_price'  => 1 === count( $prices ) && [] !== $sale_regular_prices ? min( $sale_regular_prices ) : 0.0,
 			'attributes'     => array_slice( $mapped_attributes, 0, 3 ),
+			'variants'       => $variants,
 			'stock_status'   => [] !== $prices ? 'instock' : 'outofstock',
 			'is_purchasable' => [] !== $prices,
 			'is_on_sale'     => [] !== $sale_regular_prices,

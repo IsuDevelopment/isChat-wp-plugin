@@ -19,7 +19,7 @@ if ( '' === trim( $site_id ) ) {
 if ( '1' !== get_option( 'acs_widget_enabled', '0' ) ) {
 	wp_enqueue_script(
 		'acs-widget-runtime',
-		trailingslashit( ACS_API_BASE_URL ) . 'widget.js',
+		trailingslashit( ACS_PUBLIC_BASE_URL ) . 'widget.js',
 		[],
 		false,
 		[ 'strategy' => 'defer', 'in_footer' => true ]
@@ -30,6 +30,6 @@ printf(
 	'<div %1$s><div data-ischat-search data-site-id="%2$s" data-api-url="%3$s" data-lang="%4$s"></div></div>',
 	get_block_wrapper_attributes(),
 	esc_attr( $site_id ),
-	esc_url( ACS_API_BASE_URL ),
+	esc_url( ACS_PUBLIC_BASE_URL ),
 	esc_attr( get_locale() )
 );

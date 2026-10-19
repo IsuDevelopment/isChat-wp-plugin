@@ -571,7 +571,7 @@ class ACS_Admin {
 			return;
 		}
 
-		$script_url = trailingslashit( ACS_API_BASE_URL ) . 'widget.js';
+		$script_url = trailingslashit( ACS_PUBLIC_BASE_URL ) . 'widget.js';
 		$version    = self::get_widget_asset_version();
 		$script_url = add_query_arg( 'v', rawurlencode( $version ), $script_url );
 		$lang       = (string) get_bloginfo( 'language' );
@@ -580,7 +580,7 @@ class ACS_Admin {
 			'<script src="%s" data-site-id="%s" data-api-url="%s" data-lang="%s" defer></script>' . "\n",
 			esc_url( $script_url ),
 			esc_attr( $public_key ),
-			esc_url( rtrim( ACS_API_BASE_URL, '/' ) ),
+			esc_url( rtrim( ACS_PUBLIC_BASE_URL, '/' ) ),
 			esc_attr( $lang )
 		);
 	}

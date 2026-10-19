@@ -3,7 +3,7 @@
  * Plugin Name:       IsChat
  * Plugin URI:        https://ischat.ai
  * Description:       Connects your WordPress site to the IsChat AI chat and search platform.
- * Version:           0.3.2
+ * Version:           0.3.3
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Tested up to:      6.8
@@ -20,18 +20,30 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'ACS_VERSION', '0.3.2' );
+define( 'ACS_VERSION', '0.3.3' );
 define( 'ACS_PLUGIN_FILE', __FILE__ );
 define( 'ACS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ACS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
 /**
- * Base URL of the IsChat backend.
- * Override in wp-config.php for local development:
+ * Two addresses for the same IsChat backend:
+ *
+ * - ACS_API_BASE_URL    — server-to-server calls from this site (sync, queue,
+ *                         connection test). Goes straight to the Railway host,
+ *                         so it keeps working whatever happens to the public
+ *                         domain's DNS.
+ * - ACS_PUBLIC_BASE_URL — what visitors' browsers load and call (widget.js,
+ *                         chat/search API). Always the public domain.
+ *
+ * Override either in wp-config.php. For local development defining only
+ * ACS_API_BASE_URL is enough — the public URL follows it:
  *   define( 'ACS_API_BASE_URL', 'http://localhost:8000' );
  */
+if ( ! defined( 'ACS_PUBLIC_BASE_URL' ) ) {
+	define( 'ACS_PUBLIC_BASE_URL', defined( 'ACS_API_BASE_URL' ) ? ACS_API_BASE_URL : 'https://ischat.isudev.pl' );
+}
 if ( ! defined( 'ACS_API_BASE_URL' ) ) {
-	define( 'ACS_API_BASE_URL', 'https://ischat.isudev.pl' );
+	define( 'ACS_API_BASE_URL', 'https://ischat-backend-production.up.railway.app' );
 }
 
 require_once ACS_PLUGIN_DIR . 'vendor/autoload.php';

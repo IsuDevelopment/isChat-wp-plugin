@@ -94,6 +94,22 @@ PL = {
     "Syncs today:": "Synchronizacje dzisiaj:",
     "This will queue all published content for re-sync. Continue?":
         "Wszystkie opublikowane treści zostaną dodane do kolejki ponownej synchronizacji. Kontynuować?",
+    "Compared all AI-enabled content: %d changes queued. Sending now…":
+        "Porównano wszystkie treści z włączonym AI: %d zmian w kolejce. Wysyłanie…",
+    "Last queue run": "Ostatnie przetwarzanie kolejki",
+    "%s ago": "%s temu",
+    "Never": "Nigdy",
+    'WP-Cron does not seem to run on this site, so the queue will not empty on its own. Use "Process queue now" and keep this page open until it finishes, or ask your host to set up a system cron for wp-cron.php.':
+        "WP-Cron na tej stronie chyba nie działa, więc kolejka sama się nie opróżni. Użyj „Przetwórz kolejkę teraz” i nie zamykaj strony do końca albo poproś hosting o systemowy cron dla wp-cron.php.",
+    "Process queue now": "Przetwórz kolejkę teraz",
+    "Retry failed jobs": "Ponów nieudane",
+    "Processing…": "Przetwarzanie…",
+    "Sent %1$d, %2$d left, %3$d failed. Keep this page open…":
+        "Wysłano %1$d, pozostało %2$d, nieudanych %3$d. Nie zamykaj tej strony…",
+    "Done: %1$d sent, %2$d failed.": "Gotowe: wysłano %1$d, nieudanych %2$d.",
+    "Sent %1$d. %2$d items wait for an automatic retry after an error.":
+        "Wysłano %1$d. %2$d elementów czeka na automatyczne ponowienie po błędzie.",
+    "%d failed jobs put back in the queue.": "Przywrócono do kolejki nieudanych zadań: %d.",
 
     # Admin (AJAX, list table, notices)
     "AI Indexing": "Indeksowanie AI",

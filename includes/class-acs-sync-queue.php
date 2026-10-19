@@ -119,12 +119,35 @@ class ACS_Sync_Queue {
 		// Exponential backoff: 5min, 30min, 2h
 		$delays      = [ 300, 1800, 7200 ];
 		$delay       = $delays[ $attempts ] ?? 7200;
-		$retry_after = gmdate( 'Y-m-d H:i:s', time() + $delay );
+		// Site-local time, like enqueue() and get_pending_batch(); gmdate()
+		// here skewed the backoff by the site's UTC offset.
+		$retry_after = wp_date( 'Y-m-d H:i:s', time() + $delay );
 
 		$wpdb->update( $table, [
 			'attempts'     => $attempts + 1,
 			'scheduled_at' => $retry_after,
 		], [ 'id' => $id ], [ '%d', '%s' ], [ '%d' ] );
+	}
+
+	/**
+	 * Put every abandoned job back in the queue with a clean slate.
+	 *
+	 * @return int Number of jobs re-queued.
+	 */
+	public static function retry_failed(): int {
+		global $wpdb;
+
+		return (int) $wpdb->update(
+			$wpdb->prefix . self::TABLE_NAME,
+			[
+				'status'       => 'pending',
+				'attempts'     => 0,
+				'scheduled_at' => current_time( 'mysql' ),
+			],
+			[ 'status' => 'failed' ],
+			[ '%s', '%d', '%s' ],
+			[ '%s' ]
+		);
 	}
 
 	/**

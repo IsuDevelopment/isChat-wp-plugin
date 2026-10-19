@@ -31,6 +31,8 @@ class ACS_Admin {
 		// AJAX handlers (logged-in users only — no nopriv variant needed).
 		add_action( 'wp_ajax_acs_test_connection', [ __CLASS__, 'ajax_test_connection' ] );
 		add_action( 'wp_ajax_acs_sync_all',        [ __CLASS__, 'ajax_sync_all' ] );
+		add_action( 'wp_ajax_acs_process_queue',   [ __CLASS__, 'ajax_process_queue' ] );
+		add_action( 'wp_ajax_acs_retry_failed',    [ __CLASS__, 'ajax_retry_failed' ] );
 		add_action( 'wp_ajax_acs_save_manual_kb',  [ __CLASS__, 'ajax_save_manual_kb' ] );
 		add_action( 'wp_ajax_acs_indexing_list_action', [ __CLASS__, 'ajax_indexing_list_action' ] );
 
@@ -366,10 +368,11 @@ class ACS_Admin {
 	// -------------------------------------------------------------------------
 
 	/**
-	 * AJAX handler — enqueue all published content and immediately process one batch.
+	 * AJAX handler — reconcile all AI-enabled content with the backend and
+	 * queue the differences.
 	 *
 	 * Success response shape:
-	 *   { success: true, data: { queued, processed, failed, message } }
+	 *   { success: true, data: { queued, pending, failed, message } }
 	 */
 	public static function ajax_sync_all(): void {
 		check_ajax_referer( 'acs_admin_nonce', 'nonce' );
@@ -390,31 +393,70 @@ class ACS_Admin {
 			wp_send_json_error( [ 'message' => $verify['message'] ] );
 		}
 
-		// Ask the backend for the delta, then run one inline batch for feedback.
+		// Ask the backend for the delta; the page then drains the queue.
 		$reconcile = ACS_Sync_Manager::reconcile_full_sync();
 		if ( ! $reconcile['success'] ) {
 			wp_send_json_error( [ 'message' => $reconcile['message'] ] );
 		}
 
-		$queued       = $reconcile['queued'];
-		$stats_before = ACS_Sync_Queue::get_stats();
+		$stats = ACS_Sync_Queue::get_stats();
 
-		ACS_Sync_Manager::process_queue();
+		// The settings page drains the queue right after this via
+		// acs_process_queue, so nothing here waits on WP-Cron.
+		wp_send_json_success( [
+			'queued'  => (int) $reconcile['queued'],
+			'pending' => (int) $stats['pending'],
+			'failed'  => (int) $stats['failed'],
+			'message' => sprintf(
+				/* translators: %d: number of changed items queued */
+				__( 'Compared all AI-enabled content: %d changes queued. Sending now…', 'ai-ischat' ),
+				(int) $reconcile['queued']
+			),
+		] );
+	}
 
-		$stats_after = ACS_Sync_Queue::get_stats();
-		$processed   = max( 0, $stats_before['pending'] - $stats_after['pending'] );
-		$failed      = (int) $stats_after['failed'];
+	/**
+	 * AJAX handler — process the queue for a few seconds and report progress.
+	 * The settings page calls it in a loop until nothing is left.
+	 *
+	 * Success response shape:
+	 *   { success: true, data: { processed, failed_now, pending, failed } }
+	 */
+	public static function ajax_process_queue(): void {
+		check_ajax_referer( 'acs_admin_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Permission denied.', 'ai-ischat' ) ] );
+		}
+
+		if ( ! ACS_Sync_Manager::is_configured() ) {
+			wp_send_json_error( [ 'message' => __( 'Plugin is not fully configured. Please check the Connection settings.', 'ai-ischat' ) ] );
+		}
+
+		$summary = ACS_Sync_Manager::process_queue( 15 );
+		$stats   = ACS_Sync_Queue::get_stats();
 
 		wp_send_json_success( [
-			'queued'    => $queued,
-			'processed' => $processed,
-			'failed'    => $failed,
-			'message'   => sprintf(
-				/* translators: %1$d: total posts queued, %2$d: posts processed in this batch */
-				__( 'Compared all AI-enabled content: %1$d changes queued, %2$d processed now. Remaining items will sync automatically in the background.', 'ai-ischat' ),
-				$queued,
-				$processed
-			),
+			'processed'  => $summary['processed'],
+			'failed_now' => $summary['failed'],
+			'pending'    => (int) $stats['pending'],
+			'failed'     => (int) $stats['failed'],
+		] );
+	}
+
+	/** AJAX handler — put abandoned jobs back into the queue. */
+	public static function ajax_retry_failed(): void {
+		check_ajax_referer( 'acs_admin_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Permission denied.', 'ai-ischat' ) ] );
+		}
+
+		$requeued = ACS_Sync_Queue::retry_failed();
+
+		wp_send_json_success( [
+			'requeued' => $requeued,
+			'pending'  => (int) ACS_Sync_Queue::get_stats()['pending'],
 		] );
 	}
 

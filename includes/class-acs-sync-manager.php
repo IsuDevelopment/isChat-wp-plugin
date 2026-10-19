@@ -236,59 +236,107 @@ class ACS_Sync_Manager {
 	}
 
 	/**
-	 * Process pending sync queue — called by WP-Cron.
-	 * Can also be triggered manually (admin sync all button).
+	 * Push pending jobs to the API until the queue is empty or the time budget
+	 * runs out. Called by WP-Cron and, batch after batch, by the settings page
+	 * ("Process queue now"), so a site whose WP-Cron never fires still syncs.
+	 *
+	 * One job that throws (a broken product, a fatal in a third-party filter)
+	 * is marked failed and skipped; before, it took the whole batch down and
+	 * the same job was picked first again on every run.
+	 *
+	 * @param int $time_budget Seconds to keep working.
+	 * @return array{processed: int, failed: int}
 	 */
-	public static function process_queue(): void {
+	public static function process_queue( int $time_budget = 20 ): array {
+		$summary = [ 'processed' => 0, 'failed' => 0 ];
 		if ( ! self::is_configured() ) {
-			return;
+			return $summary;
 		}
 
-		$client = self::make_client();
-		$site_id = (int) get_option( 'acs_site_id', 0 );
-		$jobs   = ACS_Sync_Queue::get_pending_batch();
+		$client   = self::make_client();
+		$site_id  = (int) get_option( 'acs_site_id', 0 );
+		$deadline = microtime( true ) + max( 1, $time_budget );
 
-		foreach ( $jobs as $job ) {
-			$post = get_post( (int) $job->post_id );
+		do {
+			$jobs = ACS_Sync_Queue::get_pending_batch();
+			foreach ( $jobs as $job ) {
+				if ( microtime( true ) >= $deadline ) {
+					break 2;
+				}
 
-			if ( $job->action === 'delete' || ! $post ) {
-				$result = $client->delete_document( $job->post_id, 'wp_' . $job->post_type );
-			} else {
-				$data = ACS_Content_Extractor::extract( $post );
+				try {
+					$ok = self::process_job( $job, $client, $site_id );
+				} catch ( Throwable $e ) {
+					error_log( 'ACS sync crashed for post ' . $job->post_id . ': ' . $e->getMessage() );
+					$ok = false;
+				}
 
-				if ( ! $data ) {
-					update_post_meta( (int) $job->post_id, '_acs_chatbot_indexed', '0' );
+				if ( $ok ) {
 					ACS_Sync_Queue::mark_done( (int) $job->id );
-					continue;
+					++$summary['processed'];
+				} else {
+					ACS_Sync_Queue::mark_failed( (int) $job->id, (int) $job->attempts );
+					++$summary['failed'];
 				}
+			}
+		} while ( ! empty( $jobs ) && microtime( true ) < $deadline );
 
-				$data['site_id'] = $site_id;
-				if ( 'wp_product' === ( $data['source_type'] ?? '' ) ) {
-					$metadata = is_array( $data['source_metadata'] ?? null ) ? $data['source_metadata'] : [];
-					error_log( sprintf(
-						'ACS product sync snapshot: product_id=%d variations=%d complete=%s payload_bytes=%d',
-						(int) $job->post_id,
-						(int) ( $metadata['variation_count'] ?? 0 ),
-						false === ( $metadata['variations_complete'] ?? true ) ? 'no' : 'yes',
-						strlen( (string) wp_json_encode( $data ) )
-					) );
-				}
-				$result = $client->upsert_document( $data );
+		update_option( 'acs_queue_last_run', [ 'time' => time() ] + $summary, false );
+
+		return $summary;
+	}
+
+	/** Send one queued job to the API; true when it is finished. */
+	private static function process_job( object $job, ACS_API_Client $client, int $site_id ): bool {
+		$post = get_post( (int) $job->post_id );
+
+		if ( 'delete' === $job->action || ! $post ) {
+			$result = $client->delete_document( $job->post_id, 'wp_' . $job->post_type );
+			if ( $result['success'] ) {
+				update_post_meta( (int) $job->post_id, '_acs_chatbot_indexed', '0' );
+			}
+		} else {
+			$data = ACS_Content_Extractor::extract( $post );
+
+			if ( ! $data ) {
+				update_post_meta( (int) $job->post_id, '_acs_chatbot_indexed', '0' );
+				return true;
 			}
 
+			$data['site_id'] = $site_id;
+			if ( 'wp_product' === ( $data['source_type'] ?? '' ) ) {
+				$metadata = is_array( $data['source_metadata'] ?? null ) ? $data['source_metadata'] : [];
+				error_log( sprintf(
+					'ACS product sync snapshot: product_id=%d variations=%d complete=%s payload_bytes=%d',
+					(int) $job->post_id,
+					(int) ( $metadata['variation_count'] ?? 0 ),
+					false === ( $metadata['variations_complete'] ?? true ) ? 'no' : 'yes',
+					strlen( (string) wp_json_encode( $data ) )
+				) );
+			}
+			$result = $client->upsert_document( $data );
 			if ( $result['success'] ) {
-				if ( $job->action === 'delete' || ! $post ) {
-					update_post_meta( (int) $job->post_id, '_acs_chatbot_indexed', '0' );
-				} else {
-					update_post_meta( (int) $job->post_id, '_acs_chatbot_indexed', '1' );
-					update_post_meta( (int) $job->post_id, '_acs_last_indexed_at', current_time( 'mysql' ) );
-				}
-				ACS_Sync_Queue::mark_done( (int) $job->id );
-			} else {
-				ACS_Sync_Queue::mark_failed( (int) $job->id, (int) $job->attempts );
-				error_log( 'ACS sync failed for post ' . $job->post_id . ': ' . $result['message'] );
+				update_post_meta( (int) $job->post_id, '_acs_chatbot_indexed', '1' );
+				update_post_meta( (int) $job->post_id, '_acs_last_indexed_at', current_time( 'mysql' ) );
 			}
 		}
+
+		if ( ! $result['success'] ) {
+			error_log( 'ACS sync failed for post ' . $job->post_id . ': ' . $result['message'] );
+		}
+
+		return $result['success'];
+	}
+
+	/**
+	 * True when WP-Cron looks dead: work is waiting but the queue cron has not
+	 * run for a while (DISABLE_WP_CRON without a system cron, blocked loopback).
+	 */
+	public static function cron_looks_stalled(): bool {
+		$last = get_option( 'acs_queue_last_run', [] );
+		$time = is_array( $last ) ? (int) ( $last['time'] ?? 0 ) : 0;
+
+		return ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ) || ( $time > 0 && time() - $time > 20 * MINUTE_IN_SECONDS );
 	}
 
 	/**

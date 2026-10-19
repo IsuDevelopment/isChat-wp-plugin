@@ -7,6 +7,14 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Domain: ai-ischat\n"
 
+#: admin/views/settings-page.php
+msgid "%d failed jobs put back in the queue."
+msgstr ""
+
+#: admin/views/settings-page.php
+msgid "%s ago"
+msgstr ""
+
 #: admin/class-acs-admin.php
 msgid "%d item updated."
 msgid_plural "%d items updated."
@@ -66,7 +74,7 @@ msgid "Chat widget will appear here on the frontend."
 msgstr ""
 
 #: admin/class-acs-admin.php
-msgid "Compared all AI-enabled content: %1$d changes queued, %2$d processed now. Remaining items will sync automatically in the background."
+msgid "Compared all AI-enabled content: %d changes queued. Sending now…"
 msgstr ""
 
 #: admin/views/settings-page.php
@@ -103,6 +111,10 @@ msgstr ""
 
 #: admin/views/settings-page.php
 msgid "Documents:"
+msgstr ""
+
+#: admin/views/settings-page.php
+msgid "Done: %1$d sent, %2$d failed."
 msgstr ""
 
 #: admin/class-acs-admin.php
@@ -241,6 +253,10 @@ msgstr ""
 msgid "Last modified:"
 msgstr ""
 
+#: admin/views/settings-page.php
+msgid "Last queue run"
+msgstr ""
+
 #: admin/class-acs-admin.php
 msgid "Last sync: %s"
 msgstr ""
@@ -263,6 +279,10 @@ msgstr ""
 
 #: admin/class-acs-admin.php
 msgid "Manual knowledge base saved locally (not synced — connection settings are incomplete)."
+msgstr ""
+
+#: admin/views/settings-page.php
+msgid "Never"
 msgstr ""
 
 #: admin/class-acs-admin.php
@@ -337,6 +357,14 @@ msgstr ""
 msgid "Post not found."
 msgstr ""
 
+#: admin/views/settings-page.php
+msgid "Process queue now"
+msgstr ""
+
+#: admin/views/settings-page.php
+msgid "Processing…"
+msgstr ""
+
 #: includes/class-acs-product-offers.php
 msgid "Provide between one and six products."
 msgstr ""
@@ -367,6 +395,10 @@ msgstr ""
 
 #: admin/views/settings-page.php
 msgid "Requires the Site Key on the Connection tab."
+msgstr ""
+
+#: admin/views/settings-page.php
+msgid "Retry failed jobs"
 msgstr ""
 
 #: admin/views/settings-page.php
@@ -407,6 +439,14 @@ msgstr ""
 
 #: admin/views/settings-page.php
 msgid "Selected post types become eligible for AI indexing, but each post still requires explicit \"Index in IsChat\" opt-in and a manual indexing action."
+msgstr ""
+
+#: admin/views/settings-page.php
+msgid "Sent %1$d, %2$d left, %3$d failed. Keep this page open…"
+msgstr ""
+
+#: admin/views/settings-page.php
+msgid "Sent %1$d. %2$d items wait for an automatic retry after an error."
 msgstr ""
 
 #: admin/views/settings-page.php
@@ -463,6 +503,10 @@ msgstr ""
 
 #: admin/views/settings-page.php
 msgid "This will queue all published content for re-sync. Continue?"
+msgstr ""
+
+#: admin/views/settings-page.php
+msgid "WP-Cron does not seem to run on this site, so the queue will not empty on its own. Use \"Process queue now\" and keep this page open until it finishes, or ask your host to set up a system cron for wp-cron.php."
 msgstr ""
 
 #: includes/class-acs-product-offers.php

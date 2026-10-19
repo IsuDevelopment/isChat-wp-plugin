@@ -9,6 +9,14 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);\n"
 "X-Domain: ai-ischat\n"
 
+#: admin/views/settings-page.php
+msgid "%d failed jobs put back in the queue."
+msgstr "Przywrócono do kolejki nieudanych zadań: %d."
+
+#: admin/views/settings-page.php
+msgid "%s ago"
+msgstr "%s temu"
+
 #: admin/class-acs-admin.php
 msgid "%d item updated."
 msgid_plural "%d items updated."
@@ -69,8 +77,8 @@ msgid "Chat widget will appear here on the frontend."
 msgstr "Widżet czatu pojawi się tutaj na stronie."
 
 #: admin/class-acs-admin.php
-msgid "Compared all AI-enabled content: %1$d changes queued, %2$d processed now. Remaining items will sync automatically in the background."
-msgstr "Porównano wszystkie treści z włączonym AI: %1$d zmian w kolejce, %2$d przetworzono teraz. Pozostałe zsynchronizują się automatycznie w tle."
+msgid "Compared all AI-enabled content: %d changes queued. Sending now…"
+msgstr "Porównano wszystkie treści z włączonym AI: %d zmian w kolejce. Wysyłanie…"
 
 #: admin/views/settings-page.php
 msgid "Connection"
@@ -107,6 +115,10 @@ msgstr "Wyłączone"
 #: admin/views/settings-page.php
 msgid "Documents:"
 msgstr "Dokumenty:"
+
+#: admin/views/settings-page.php
+msgid "Done: %1$d sent, %2$d failed."
+msgstr "Gotowe: wysłano %1$d, nieudanych %2$d."
 
 #: admin/class-acs-admin.php
 msgid "Enable AI indexing"
@@ -244,6 +256,10 @@ msgstr "Ostatnie indeksowanie:"
 msgid "Last modified:"
 msgstr "Ostatnia modyfikacja:"
 
+#: admin/views/settings-page.php
+msgid "Last queue run"
+msgstr "Ostatnie przetwarzanie kolejki"
+
 #: admin/class-acs-admin.php
 msgid "Last sync: %s"
 msgstr "Ostatnia synchronizacja: %s"
@@ -267,6 +283,10 @@ msgstr "Ręczna baza wiedzy zapisana i zsynchronizowana."
 #: admin/class-acs-admin.php
 msgid "Manual knowledge base saved locally (not synced — connection settings are incomplete)."
 msgstr "Ręczna baza wiedzy zapisana lokalnie (bez synchronizacji — ustawienia połączenia są niekompletne)."
+
+#: admin/views/settings-page.php
+msgid "Never"
+msgstr "Nigdy"
 
 #: admin/class-acs-admin.php
 msgid "Never synced"
@@ -340,6 +360,14 @@ msgstr "Wpis zaindeksowany."
 msgid "Post not found."
 msgstr "Nie znaleziono wpisu."
 
+#: admin/views/settings-page.php
+msgid "Process queue now"
+msgstr "Przetwórz kolejkę teraz"
+
+#: admin/views/settings-page.php
+msgid "Processing…"
+msgstr "Przetwarzanie…"
+
 #: includes/class-acs-product-offers.php
 msgid "Provide between one and six products."
 msgstr "Podaj od jednego do sześciu produktów."
@@ -371,6 +399,10 @@ msgstr "Żądanie nie powiodło się. Spróbuj ponownie."
 #: admin/views/settings-page.php
 msgid "Requires the Site Key on the Connection tab."
 msgstr "Wymaga klucza witryny w zakładce Połączenie."
+
+#: admin/views/settings-page.php
+msgid "Retry failed jobs"
+msgstr "Ponów nieudane"
 
 #: admin/views/settings-page.php
 msgid "Save & Sync to Knowledge Base"
@@ -411,6 +443,14 @@ msgstr "Tajny klucz API — skopiuj go z panelu IsChat → Witryny → Twoja wit
 #: admin/views/settings-page.php
 msgid "Selected post types become eligible for AI indexing, but each post still requires explicit \"Index in IsChat\" opt-in and a manual indexing action."
 msgstr "Wybrane typy treści mogą być indeksowane przez AI, ale każdy wpis nadal wymaga włączenia opcji „Indeksuj w IsChat” i ręcznego zaindeksowania."
+
+#: admin/views/settings-page.php
+msgid "Sent %1$d, %2$d left, %3$d failed. Keep this page open…"
+msgstr "Wysłano %1$d, pozostało %2$d, nieudanych %3$d. Nie zamykaj tej strony…"
+
+#: admin/views/settings-page.php
+msgid "Sent %1$d. %2$d items wait for an automatic retry after an error."
+msgstr "Wysłano %1$d. %2$d elementów czeka na automatyczne ponowienie po błędzie."
 
 #: admin/views/settings-page.php
 msgid "Settings sections"
@@ -467,6 +507,10 @@ msgstr "Ten wpis nie może być indeksowany przez AI. Włącz „Indeksuj w IsCh
 #: admin/views/settings-page.php
 msgid "This will queue all published content for re-sync. Continue?"
 msgstr "Wszystkie opublikowane treści zostaną dodane do kolejki ponownej synchronizacji. Kontynuować?"
+
+#: admin/views/settings-page.php
+msgid "WP-Cron does not seem to run on this site, so the queue will not empty on its own. Use \"Process queue now\" and keep this page open until it finishes, or ask your host to set up a system cron for wp-cron.php."
+msgstr "WP-Cron na tej stronie chyba nie działa, więc kolejka sama się nie opróżni. Użyj „Przetwórz kolejkę teraz” i nie zamykaj strony do końca albo poproś hosting o systemowy cron dla wp-cron.php."
 
 #: includes/class-acs-product-offers.php
 msgid "WooCommerce is unavailable."

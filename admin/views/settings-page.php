@@ -208,8 +208,44 @@ $acs_tab_url = function ( string $tab ) : string {
 						?>
 					</td>
 				</tr>
+				<tr>
+					<td><?php esc_html_e( 'Last queue run', 'ai-ischat' ); ?></td>
+					<td>
+						<?php
+						$acs_last_run = get_option( 'acs_queue_last_run', [] );
+						if ( is_array( $acs_last_run ) && ! empty( $acs_last_run['time'] ) ) {
+							echo esc_html(
+								sprintf(
+									/* translators: %s: human-readable time since the last queue run */
+									__( '%s ago', 'ai-ischat' ),
+									human_time_diff( (int) $acs_last_run['time'], time() )
+								)
+							);
+						} else {
+							esc_html_e( 'Never', 'ai-ischat' );
+						}
+						?>
+					</td>
+				</tr>
 			</tbody>
 		</table>
+
+		<?php if ( $acs_stats['pending'] > 0 && ACS_Sync_Manager::cron_looks_stalled() ) : ?>
+		<div class="notice notice-warning inline" style="margin-top: 12px;">
+			<p><?php esc_html_e( 'WP-Cron does not seem to run on this site, so the queue will not empty on its own. Use "Process queue now" and keep this page open until it finishes, or ask your host to set up a system cron for wp-cron.php.', 'ai-ischat' ); ?></p>
+		</div>
+		<?php endif; ?>
+
+		<p style="margin-top: 1em;">
+			<button type="button" id="acs-process-queue" class="button button-secondary" <?php disabled( ! $acs_is_configured || 0 === (int) $acs_stats['pending'] ); ?>>
+				<?php esc_html_e( 'Process queue now', 'ai-ischat' ); ?>
+			</button>
+			&nbsp;
+			<button type="button" id="acs-retry-failed" class="button button-secondary" <?php disabled( 0 === (int) $acs_stats['failed'] ); ?>>
+				<?php esc_html_e( 'Retry failed jobs', 'ai-ischat' ); ?>
+			</button>
+		</p>
+		<div id="acs-queue-result" style="margin-top: 12px;" aria-live="polite"></div>
 
 	</div><!-- #acs-tab-connection -->
 	<?php endif; ?>
@@ -345,8 +381,98 @@ $acs_tab_url = function ( string $tab ) : string {
 		saveFailed:      <?php echo wp_json_encode( __( 'Save failed.',                             'ai-ischat' ) ); ?>,
 		plan:            <?php echo wp_json_encode( __( 'Plan:',                                    'ai-ischat' ) ); ?>,
 		documents:       <?php echo wp_json_encode( __( 'Documents:',                              'ai-ischat' ) ); ?>,
-		syncsToday:      <?php echo wp_json_encode( __( 'Syncs today:',                            'ai-ischat' ) ); ?>
+		syncsToday:      <?php echo wp_json_encode( __( 'Syncs today:',                            'ai-ischat' ) ); ?>,
+		processing:      <?php echo wp_json_encode( __( 'Processing…',                              'ai-ischat' ) ); ?>,
+		processBtn:      <?php echo wp_json_encode( __( 'Process queue now',                        'ai-ischat' ) ); ?>,
+		/* translators: %1$d: items sent so far, %2$d: items still pending, %3$d: failed items */
+		progress:        <?php echo wp_json_encode( __( 'Sent %1$d, %2$d left, %3$d failed. Keep this page open…', 'ai-ischat' ) ); ?>,
+		/* translators: %1$d: items sent, %2$d: failed items */
+		queueDone:       <?php echo wp_json_encode( __( 'Done: %1$d sent, %2$d failed.',            'ai-ischat' ) ); ?>,
+		/* translators: %1$d: items sent, %2$d: items waiting for a retry */
+		queueWaiting:    <?php echo wp_json_encode( __( 'Sent %1$d. %2$d items wait for an automatic retry after an error.', 'ai-ischat' ) ); ?>,
+		/* translators: %d: number of jobs put back into the queue */
+		requeued:        <?php echo wp_json_encode( __( '%d failed jobs put back in the queue.',    'ai-ischat' ) ); ?>
 	};
+
+	/** Fill %d / %1$d placeholders of a translated string. */
+	function format( template ) {
+		var args = Array.prototype.slice.call( arguments, 1 );
+		var next = 0;
+		return template.replace( /%(\d)\$d|%d/g, function ( match, position ) {
+			return String( position ? args[ position - 1 ] : args[ next++ ] );
+		} );
+	}
+
+	/**
+	 * Drain the queue batch after batch from the browser, so syncing does not
+	 * depend on WP-Cron. Stops when nothing is left, or when a batch makes no
+	 * progress (what remains is waiting out a retry backoff).
+	 */
+	function drainQueue( $result, onDone ) {
+		var sent = 0;
+		var $btn = $( '#acs-process-queue' ).prop( 'disabled', true ).text( i18n.processing );
+
+		function finish() {
+			$btn.prop( 'disabled', false ).text( i18n.processBtn );
+			if ( onDone ) {
+				onDone();
+			}
+		}
+
+		function step() {
+			$.post( ajaxUrl, { action: 'acs_process_queue', nonce: nonce } )
+				.done( function ( response ) {
+					if ( ! response.success ) {
+						showResult( $result, 'error', ( response.data && response.data.message ) ? response.data.message : i18n.syncFailed );
+						finish();
+						return;
+					}
+					var data = response.data;
+					sent += data.processed;
+					if ( data.pending > 0 && ( data.processed > 0 || data.failed_now > 0 ) ) {
+						showResult( $result, 'success', format( i18n.progress, sent, data.pending, data.failed ) );
+						step();
+						return;
+					}
+					showResult(
+						$result,
+						data.failed > 0 ? 'error' : 'success',
+						data.pending > 0 ? format( i18n.queueWaiting, sent, data.pending ) : format( i18n.queueDone, sent, data.failed )
+					);
+					finish();
+				} )
+				.fail( function () {
+					showResult( $result, 'error', i18n.requestFailed );
+					finish();
+				} );
+		}
+
+		step();
+	}
+
+	$( '#acs-process-queue' ).on( 'click', function () {
+		drainQueue( $( '#acs-queue-result' ) );
+	} );
+
+	$( '#acs-retry-failed' ).on( 'click', function () {
+		var $btn    = $( this ).prop( 'disabled', true );
+		var $result = $( '#acs-queue-result' );
+
+		$.post( ajaxUrl, { action: 'acs_retry_failed', nonce: nonce } )
+			.done( function ( response ) {
+				if ( response.success ) {
+					showResult( $result, 'success', format( i18n.requeued, response.data.requeued ) );
+					drainQueue( $result );
+				} else {
+					showResult( $result, 'error', i18n.requestFailed );
+					$btn.prop( 'disabled', false );
+				}
+			} )
+			.fail( function () {
+				showResult( $result, 'error', i18n.requestFailed );
+				$btn.prop( 'disabled', false );
+			} );
+	} );
 
 	/**
 	 * Render an inline WordPress-style notice inside $container.
@@ -421,14 +547,19 @@ $acs_tab_url = function ( string $tab ) : string {
 			.done( function ( response ) {
 				if ( response.success ) {
 					showResult( $result, 'success', response.data.message );
+					if ( response.data.pending > 0 ) {
+						drainQueue( $result, function () {
+							$btn.prop( 'disabled', false ).text( i18n.syncBtn );
+						} );
+						return;
+					}
 				} else {
 					showResult( $result, 'error', ( response.data && response.data.message ) ? response.data.message : i18n.syncFailed );
 				}
+				$btn.prop( 'disabled', false ).text( i18n.syncBtn );
 			} )
 			.fail( function () {
 				showResult( $result, 'error', i18n.requestFailed );
-			} )
-			.always( function () {
 				$btn.prop( 'disabled', false ).text( i18n.syncBtn );
 			} );
 	} );

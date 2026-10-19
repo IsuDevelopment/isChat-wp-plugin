@@ -1,0 +1,477 @@
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: IsChat\n"
+"Language: pl_PL\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);\n"
+"X-Domain: ai-ischat\n"
+
+#: admin/class-acs-admin.php
+msgid "%d item updated."
+msgid_plural "%d items updated."
+msgstr[0] "Zaktualizowano %d element."
+msgstr[1] "Zaktualizowano %d elementy."
+msgstr[2] "Zaktualizowano %d elementów."
+
+#: admin/class-acs-admin.php src/index-panel/index.js
+msgid "AI Indexing"
+msgstr "Indeksowanie AI"
+
+#: admin/class-acs-admin.php
+msgid "AI indexing disabled and removal from the index queued."
+msgstr "Indeksowanie AI wyłączone, usunięcie z indeksu w kolejce."
+
+#: admin/class-acs-admin.php
+msgid "AI indexing disabled. Removal queued."
+msgstr "Indeksowanie AI wyłączone. Usunięcie w kolejce."
+
+#: admin/class-acs-admin.php
+msgid "AI indexing enabled and sync queued."
+msgstr "Indeksowanie AI włączone, synchronizacja w kolejce."
+
+#: admin/class-acs-admin.php
+msgid "AI indexing enabled. Sync queued."
+msgstr "Indeksowanie AI włączone. Synchronizacja w kolejce."
+
+#: assets/js/search-block-editor.js src/search/index.js
+msgid "AI search widget will appear here on the frontend."
+msgstr "Wyszukiwarka AI pojawi się tutaj na stronie."
+
+#: admin/views/settings-page.php
+msgid "API Connection"
+msgstr "Połączenie z API"
+
+#: admin/views/settings-page.php
+msgid "API Key"
+msgstr "Klucz API"
+
+#: admin/views/settings-page.php
+msgid "Actions"
+msgstr "Akcje"
+
+#: admin/views/settings-page.php
+msgid "Add custom knowledge to your chatbot — FAQs, company facts, product details, or any text you want the AI to know about. This content is stored as a single document in the knowledge base."
+msgstr "Dodaj własną wiedzę dla chatbota — FAQ, informacje o firmie, szczegóły produktów lub dowolny tekst, który AI ma znać. Treść jest zapisywana jako jeden dokument w bazie wiedzy."
+
+#: src/index-panel/index.js
+msgid "Additional context for the AI — not visible on the page."
+msgstr "Dodatkowy kontekst dla AI — niewidoczny na stronie."
+
+#: admin/views/settings-page.php
+msgid "Chat Widget"
+msgstr "Widżet czatu"
+
+#: assets/js/chat-block-editor.js src/chat/index.js
+msgid "Chat widget will appear here on the frontend."
+msgstr "Widżet czatu pojawi się tutaj na stronie."
+
+#: admin/class-acs-admin.php
+msgid "Compared all AI-enabled content: %1$d changes queued, %2$d processed now. Remaining items will sync automatically in the background."
+msgstr "Porównano wszystkie treści z włączonym AI: %1$d zmian w kolejce, %2$d przetworzono teraz. Pozostałe zsynchronizują się automatycznie w tle."
+
+#: admin/views/settings-page.php
+msgid "Connection"
+msgstr "Połączenie"
+
+#: admin/views/settings-page.php
+msgid "Connection failed."
+msgstr "Połączenie nie powiodło się."
+
+#: admin/class-acs-admin.php
+msgid "Connection successful!"
+msgstr "Połączenie działa!"
+
+#: admin/views/settings-page.php
+msgid "Content"
+msgstr "Treści"
+
+#: src/index-panel/index.js
+msgid "Content changed since last index."
+msgstr "Treść zmieniła się od ostatniego indeksowania."
+
+#: admin/class-acs-admin.php
+msgid "Disable AI indexing"
+msgstr "Wyłącz indeksowanie AI"
+
+#: admin/class-acs-admin.php
+msgid "Disable IsChat AI Indexing"
+msgstr "Wyłącz indeksowanie AI IsChat"
+
+#: admin/class-acs-admin.php
+msgid "Disabled"
+msgstr "Wyłączone"
+
+#: admin/views/settings-page.php
+msgid "Documents:"
+msgstr "Dokumenty:"
+
+#: admin/class-acs-admin.php
+msgid "Enable AI indexing"
+msgstr "Włącz indeksowanie AI"
+
+#: admin/class-acs-admin.php
+msgid "Enable AI indexing before forcing a sync."
+msgstr "Włącz indeksowanie AI przed wymuszeniem synchronizacji."
+
+#: admin/views/settings-page.php
+msgid "Enable Chat Widget"
+msgstr "Włącz widżet czatu"
+
+#: admin/class-acs-admin.php
+msgid "Enable IsChat AI Indexing"
+msgstr "Włącz indeksowanie AI IsChat"
+
+#: includes/class-acs-sync-manager.php
+msgid "Every 5 minutes"
+msgstr "Co 5 minut"
+
+#: src/chat/index.js
+msgid "Example questions"
+msgstr "Przykładowe pytania"
+
+#: src/index-panel/index.js
+msgid "Extra AI description"
+msgstr "Dodatkowy opis dla AI"
+
+#: admin/views/settings-page.php
+msgid "Failed jobs"
+msgstr "Zadania nieudane"
+
+#: admin/class-acs-admin.php
+msgid "Force sync completed."
+msgstr "Wymuszona synchronizacja zakończona."
+
+#: src/index-panel/index.js
+msgid "Index in IsChat"
+msgstr "Indeksuj w IsChat"
+
+#: admin/class-acs-admin.php
+msgid "Indexed"
+msgstr "Zaindeksowano"
+
+#: src/index-panel/index.js
+msgid "Indexed successfully."
+msgstr "Zaindeksowano."
+
+#: src/index-panel/index.js
+msgid "Indexed:"
+msgstr "Zaindeksowano:"
+
+#: admin/views/settings-page.php
+msgid "Indexing"
+msgstr "Indeksowanie"
+
+#: src/index-panel/index.js
+msgid "Indexing failed. Check plugin configuration."
+msgstr "Indeksowanie nie powiodło się. Sprawdź konfigurację wtyczki."
+
+#: src/index-panel/index.js
+msgid "Indexing…"
+msgstr "Indeksowanie…"
+
+#: admin/views/settings-page.php
+msgid "Inject the chat widget script on all public-facing pages"
+msgstr "Dodaj skrypt widżetu czatu na wszystkich publicznych stronach"
+
+#: assets/js/chat-block-editor.js
+msgid "Inline chat window powered by IsChat. Visitors can chat directly on the page."
+msgstr "Okno czatu IsChat osadzone na stronie. Odwiedzający mogą rozmawiać bezpośrednio na stronie."
+
+#: src/chat/block.json
+msgctxt "block description"
+msgid "Inline chat window powered by IsChat. Visitors can chat directly on the page."
+msgstr "Okno czatu IsChat osadzone na stronie. Odwiedzający mogą rozmawiać bezpośrednio na stronie."
+
+#: assets/js/search-block-editor.js
+msgid "Inline contextual AI search block powered by IsChat."
+msgstr "Blok kontekstowej wyszukiwarki AI IsChat."
+
+#: src/search/block.json
+msgctxt "block description"
+msgid "Inline contextual AI search powered by IsChat."
+msgstr "Kontekstowa wyszukiwarka AI IsChat osadzona na stronie."
+
+#: admin/class-acs-admin.php
+msgid "Invalid indexing action."
+msgstr "Nieprawidłowa akcja indeksowania."
+
+#: includes/class-acs-product-offers.php
+msgid "Invalid offer verification signature."
+msgstr "Nieprawidłowy podpis weryfikacji oferty."
+
+#: admin/class-acs-admin.php
+msgid "Invalid request."
+msgstr "Nieprawidłowe żądanie."
+
+#: admin/class-acs-admin.php admin/views/settings-page.php
+msgid "IsChat"
+msgstr "IsChat"
+
+#: assets/js/chat-block-editor.js src/chat/index.js
+msgid "IsChat Chat"
+msgstr "Czat IsChat"
+
+#: src/chat/block.json
+msgctxt "block title"
+msgid "IsChat Chat"
+msgstr "Czat IsChat"
+
+#: assets/js/search-block-editor.js src/search/index.js
+msgid "IsChat Search"
+msgstr "Wyszukiwarka IsChat"
+
+#: src/search/block.json
+msgctxt "block title"
+msgid "IsChat Search"
+msgstr "Wyszukiwarka IsChat"
+
+#: admin/views/settings-page.php
+msgid "Knowledge Base"
+msgstr "Baza wiedzy"
+
+#: admin/views/settings-page.php
+msgid "Knowledge Base Content"
+msgstr "Treść bazy wiedzy"
+
+#: src/index-panel/index.js
+msgid "Last indexed:"
+msgstr "Ostatnie indeksowanie:"
+
+#: src/index-panel/index.js
+msgid "Last modified:"
+msgstr "Ostatnia modyfikacja:"
+
+#: admin/class-acs-admin.php
+msgid "Last sync: %s"
+msgstr "Ostatnia synchronizacja: %s"
+
+#: src/index-panel/index.js
+msgid "Manual Index Now"
+msgstr "Zaindeksuj teraz"
+
+#: admin/class-acs-admin.php admin/views/settings-page.php
+msgid "Manual Knowledge Base"
+msgstr "Ręczna baza wiedzy"
+
+#: src/index-panel/index.js
+msgid "Manual indexing is available for published posts only."
+msgstr "Ręczne indeksowanie jest dostępne tylko dla opublikowanych wpisów."
+
+#: admin/class-acs-admin.php
+msgid "Manual knowledge base saved and synced successfully."
+msgstr "Ręczna baza wiedzy zapisana i zsynchronizowana."
+
+#: admin/class-acs-admin.php
+msgid "Manual knowledge base saved locally (not synced — connection settings are incomplete)."
+msgstr "Ręczna baza wiedzy zapisana lokalnie (bez synchronizacji — ustawienia połączenia są niekompletne)."
+
+#: admin/class-acs-admin.php
+msgid "Never synced"
+msgstr "Nigdy nie synchronizowano"
+
+#: admin/views/settings-page.php
+msgid "Next cron run"
+msgstr "Następne uruchomienie crona"
+
+#: admin/views/settings-page.php
+msgid "Not scheduled"
+msgstr "Nie zaplanowano"
+
+#: admin/views/settings-page.php
+msgid "Numeric site ID from the IsChat dashboard."
+msgstr "Numeryczne ID witryny z panelu IsChat."
+
+#: includes/class-acs-product-offers.php
+msgid "Offer verification request was already used."
+msgstr "To żądanie weryfikacji oferty zostało już użyte."
+
+#: src/chat/index.js
+msgid "One question per line, up to 5. Leave empty to use the questions configured for this site."
+msgstr "Jedno pytanie w wierszu, maksymalnie 5. Zostaw puste, aby użyć pytań skonfigurowanych dla tej witryny."
+
+#: admin/views/settings-page.php
+msgid "Pending jobs"
+msgstr "Zadania oczekujące"
+
+#: admin/class-acs-admin.php
+msgid "Permission denied."
+msgstr "Brak uprawnień."
+
+#: admin/views/settings-page.php
+msgid "Plain text only. Write clearly — the AI will use this verbatim. Each save replaces the previous content."
+msgstr "Tylko czysty tekst. Pisz jasno — AI użyje go dosłownie. Każdy zapis zastępuje poprzednią treść."
+
+#: admin/views/settings-page.php
+msgid "Plan:"
+msgstr "Plan:"
+
+#: ai-ischat.php
+msgid "Plugin is not configured (missing API key or Site ID)."
+msgstr "Wtyczka nie jest skonfigurowana (brak klucza API lub ID witryny)."
+
+#: includes/class-acs-sync-manager.php
+msgid "Plugin is not fully configured."
+msgstr "Wtyczka nie jest w pełni skonfigurowana."
+
+#: admin/class-acs-admin.php
+msgid "Plugin is not fully configured. Please check the Connection settings."
+msgstr "Wtyczka nie jest w pełni skonfigurowana. Sprawdź ustawienia połączenia."
+
+#: admin/views/settings-page.php
+msgid "Plugin is not fully configured. Please fill in the API Key and Site ID on the Connection tab."
+msgstr "Wtyczka nie jest w pełni skonfigurowana. Uzupełnij klucz API i ID witryny w zakładce Połączenie."
+
+#: admin/class-acs-admin.php
+msgid "Plugin is not fully configured. Please fill in the API Key and Site ID."
+msgstr "Wtyczka nie jest w pełni skonfigurowana. Uzupełnij klucz API i ID witryny."
+
+#: admin/views/settings-page.php
+msgid "Post Types to Index"
+msgstr "Typy treści do indeksowania"
+
+#: includes/class-acs-sync-manager.php
+msgid "Post indexed successfully."
+msgstr "Wpis zaindeksowany."
+
+#: ai-ischat.php
+msgid "Post not found."
+msgstr "Nie znaleziono wpisu."
+
+#: includes/class-acs-product-offers.php
+msgid "Provide between one and six products."
+msgstr "Podaj od jednego do sześciu produktów."
+
+#: admin/views/settings-page.php
+msgid "Public site key from the IsChat panel (e.g. site_testkey123). Used by the chat widget and the IsChat blocks."
+msgstr "Publiczny klucz witryny z panelu IsChat (np. site_testkey123). Używany przez widżet czatu i bloki IsChat."
+
+#: src/chat/index.js
+msgid "Questions"
+msgstr "Pytania"
+
+#: admin/class-acs-admin.php
+msgid "Queue IsChat force sync"
+msgstr "Wymuś synchronizację IsChat"
+
+#: admin/views/settings-page.php
+msgid "Queue Status"
+msgstr "Stan kolejki"
+
+#: admin/class-acs-admin.php
+msgid "Queue force sync"
+msgstr "Dodaj wymuszoną synchronizację do kolejki"
+
+#: admin/views/settings-page.php
+msgid "Request failed. Please try again."
+msgstr "Żądanie nie powiodło się. Spróbuj ponownie."
+
+#: admin/views/settings-page.php
+msgid "Requires the Site Key on the Connection tab."
+msgstr "Wymaga klucza witryny w zakładce Połączenie."
+
+#: admin/views/settings-page.php
+msgid "Save & Sync to Knowledge Base"
+msgstr "Zapisz i synchronizuj z bazą wiedzy"
+
+#: admin/views/settings-page.php
+msgid "Save &amp; Sync to Knowledge Base"
+msgstr "Zapisz i synchronizuj z bazą wiedzy"
+
+#: admin/views/settings-page.php
+msgid "Save Connection Settings"
+msgstr "Zapisz ustawienia połączenia"
+
+#: admin/views/settings-page.php
+msgid "Save Content Settings"
+msgstr "Zapisz ustawienia treści"
+
+#: admin/views/settings-page.php
+msgid "Save failed."
+msgstr "Zapis nie powiódł się."
+
+#: src/index-panel/index.js
+msgid "Save the post first to apply changes."
+msgstr "Najpierw zapisz wpis, aby zastosować zmiany."
+
+#: admin/views/settings-page.php
+msgid "Save your settings first, then use these actions to verify the connection or push all content to the knowledge base."
+msgstr "Najpierw zapisz ustawienia, a potem użyj tych akcji, aby sprawdzić połączenie lub wysłać wszystkie treści do bazy wiedzy."
+
+#: admin/views/settings-page.php
+msgid "Saving…"
+msgstr "Zapisywanie…"
+
+#: admin/views/settings-page.php
+msgid "Secret API key — copy it from the IsChat panel → Sites → your site → API Key."
+msgstr "Tajny klucz API — skopiuj go z panelu IsChat → Witryny → Twoja witryna → Klucz API."
+
+#: admin/views/settings-page.php
+msgid "Selected post types become eligible for AI indexing, but each post still requires explicit \"Index in IsChat\" opt-in and a manual indexing action."
+msgstr "Wybrane typy treści mogą być indeksowane przez AI, ale każdy wpis nadal wymaga włączenia opcji „Indeksuj w IsChat” i ręcznego zaindeksowania."
+
+#: admin/views/settings-page.php
+msgid "Settings sections"
+msgstr "Sekcje ustawień"
+
+#: admin/views/settings-page.php
+msgid "Site ID"
+msgstr "ID witryny"
+
+#: admin/views/settings-page.php
+msgid "Site Key"
+msgstr "Klucz witryny"
+
+#: admin/views/settings-page.php
+msgid "Sync All Content"
+msgstr "Synchronizuj wszystkie treści"
+
+#: admin/views/settings-page.php
+msgid "Sync failed."
+msgstr "Synchronizacja nie powiodła się."
+
+#: admin/class-acs-admin.php
+msgid "Sync pending"
+msgstr "Oczekuje na synchronizację"
+
+#: admin/views/settings-page.php
+msgid "Sync queue: %1$d pending, %2$d failed."
+msgstr "Kolejka synchronizacji: %1$d oczekujących, %2$d nieudanych."
+
+#: admin/views/settings-page.php
+msgid "Syncing…"
+msgstr "Synchronizowanie…"
+
+#: admin/views/settings-page.php
+msgid "Syncs today:"
+msgstr "Synchronizacje dzisiaj:"
+
+#: admin/views/settings-page.php
+msgid "Test Connection"
+msgstr "Testuj połączenie"
+
+#: admin/views/settings-page.php
+msgid "Testing…"
+msgstr "Testowanie…"
+
+#: admin/class-acs-admin.php
+msgid "The indexing action failed. Please try again."
+msgstr "Akcja indeksowania nie powiodła się. Spróbuj ponownie."
+
+#: includes/class-acs-sync-manager.php
+msgid "This post is not eligible for AI indexing. Enable \"Index in IsChat\", use a supported post type, and keep the post published."
+msgstr "Ten wpis nie może być indeksowany przez AI. Włącz „Indeksuj w IsChat”, użyj obsługiwanego typu treści i pozostaw wpis opublikowany."
+
+#: admin/views/settings-page.php
+msgid "This will queue all published content for re-sync. Continue?"
+msgstr "Wszystkie opublikowane treści zostaną dodane do kolejki ponownej synchronizacji. Kontynuować?"
+
+#: includes/class-acs-product-offers.php
+msgid "WooCommerce is unavailable."
+msgstr "WooCommerce jest niedostępny."
+
+#: admin/views/settings-page.php
+msgid "in %s"
+msgstr "za %s"

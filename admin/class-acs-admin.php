@@ -88,6 +88,12 @@ class ACS_Admin {
 			'default'           => 0,
 		] );
 
+		register_setting( 'acs_connection_group', 'acs_widget_public_key', [
+			'type'              => 'string',
+			'sanitize_callback' => 'sanitize_text_field',
+			'default'           => '',
+		] );
+
 		// --- Content group ----------------------------------------------------
 
 		register_setting( 'acs_content_group', 'acs_post_types', [
@@ -103,12 +109,6 @@ class ACS_Admin {
 				return ! empty( $value ) ? '1' : '0';
 			},
 			'default'           => '0',
-		] );
-
-		register_setting( 'acs_content_group', 'acs_widget_public_key', [
-			'type'              => 'string',
-			'sanitize_callback' => 'sanitize_text_field',
-			'default'           => '',
 		] );
 
 		// --- Knowledge Base group ---------------------------------------------

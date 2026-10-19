@@ -4,6 +4,7 @@
  *
  * Rendered by ACS_Admin::render_settings_page().
  * Three tabs: Connection | Content | Knowledge Base.
+ * All credentials (API key, site ID, site key) live on the Connection tab.
  *
  * @package AI_Chatbot_SaaS
  */
@@ -92,15 +93,6 @@ $acs_tab_url = function ( string $tab ) : string {
 		<form method="post" action="options.php">
 			<?php settings_fields( 'acs_connection_group' ); ?>
 			<h2 class="title"><?php esc_html_e( 'API Connection', 'ai-ischat' ); ?></h2>
-			<p class="description" style="margin-bottom:1em">
-				<?php
-				printf(
-					/* translators: %s: API base URL */
-					esc_html__( 'Connecting to: %s', 'ai-ischat' ),
-					'<code>' . esc_html( ACS_API_BASE_URL ) . '</code>'
-				);
-				?>
-			</p>
 			<table class="form-table" role="presentation">
 				<tr>
 					<th scope="row">
@@ -116,7 +108,7 @@ $acs_tab_url = function ( string $tab ) : string {
 							autocomplete="new-password"
 						/>
 						<p class="description">
-							<?php esc_html_e( 'Secret API key — copy from the SaaS panel → Sites → your site → API Key.', 'ai-ischat' ); ?>
+							<?php esc_html_e( 'Secret API key — copy it from the IsChat panel → Sites → your site → API Key.', 'ai-ischat' ); ?>
 						</p>
 					</td>
 				</tr>
@@ -136,6 +128,24 @@ $acs_tab_url = function ( string $tab ) : string {
 						/>
 						<p class="description">
 							<?php esc_html_e( 'Numeric site ID from the IsChat dashboard.', 'ai-ischat' ); ?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
+						<label for="acs_widget_public_key"><?php esc_html_e( 'Site Key', 'ai-ischat' ); ?></label>
+					</th>
+					<td>
+						<input
+							type="text"
+							id="acs_widget_public_key"
+							name="acs_widget_public_key"
+							value="<?php echo esc_attr( (string) get_option( 'acs_widget_public_key', '' ) ); ?>"
+							class="regular-text"
+							placeholder="site_testkey123"
+						/>
+						<p class="description">
+							<?php esc_html_e( 'Public site key from the IsChat panel (e.g. site_testkey123). Used by the chat widget and the IsChat blocks.', 'ai-ischat' ); ?>
 						</p>
 					</td>
 				</tr>
@@ -259,25 +269,7 @@ $acs_tab_url = function ( string $tab ) : string {
 							<?php esc_html_e( 'Inject the chat widget script on all public-facing pages', 'ai-ischat' ); ?>
 						</label>
 						<p class="description">
-							<?php esc_html_e( 'When enabled, a <script> tag pointing to the widget will be added to wp_footer.', 'ai-ischat' ); ?>
-						</p>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row">
-						<label for="acs_widget_public_key"><?php esc_html_e( 'Widget Public Key', 'ai-ischat' ); ?></label>
-					</th>
-					<td>
-						<input
-							type="text"
-							id="acs_widget_public_key"
-							name="acs_widget_public_key"
-							value="<?php echo esc_attr( (string) get_option( 'acs_widget_public_key', '' ) ); ?>"
-							class="regular-text"
-							placeholder="site_testkey123"
-						/>
-						<p class="description">
-							<?php esc_html_e( 'The public site key from your SaaS dashboard (e.g. site_testkey123). Passed as data-site-id on the widget script tag.', 'ai-ischat' ); ?>
+							<?php esc_html_e( 'Requires the Site Key on the Connection tab.', 'ai-ischat' ); ?>
 						</p>
 					</td>
 				</tr>
@@ -341,11 +333,11 @@ $acs_tab_url = function ( string $tab ) : string {
 	var nonce   = <?php echo wp_json_encode( wp_create_nonce( 'acs_admin_nonce' ) ); ?>;
 
 	var i18n = {
-		testing:         <?php echo wp_json_encode( __( 'Testing\u2026',                           'ai-ischat' ) ); ?>,
+		testing:         <?php echo wp_json_encode( __( 'Testing…',                           'ai-ischat' ) ); ?>,
 		testBtn:         <?php echo wp_json_encode( __( 'Test Connection',                          'ai-ischat' ) ); ?>,
-		syncing:         <?php echo wp_json_encode( __( 'Syncing\u2026',                            'ai-ischat' ) ); ?>,
+		syncing:         <?php echo wp_json_encode( __( 'Syncing…',                            'ai-ischat' ) ); ?>,
 		syncBtn:         <?php echo wp_json_encode( __( 'Sync All Content',                         'ai-ischat' ) ); ?>,
-		saving:          <?php echo wp_json_encode( __( 'Saving\u2026',                             'ai-ischat' ) ); ?>,
+		saving:          <?php echo wp_json_encode( __( 'Saving…',                             'ai-ischat' ) ); ?>,
 		saveBtn:         <?php echo wp_json_encode( __( 'Save & Sync to Knowledge Base',            'ai-ischat' ) ); ?>,
 		requestFailed:   <?php echo wp_json_encode( __( 'Request failed. Please try again.',        'ai-ischat' ) ); ?>,
 		connectionFailed:<?php echo wp_json_encode( __( 'Connection failed.',                       'ai-ischat' ) ); ?>,

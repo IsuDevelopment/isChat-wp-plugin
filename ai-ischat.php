@@ -3,7 +3,7 @@
  * Plugin Name:       IsChat
  * Plugin URI:        https://ischat.ai
  * Description:       Connects your WordPress site to the IsChat AI chat and search platform.
- * Version:           0.3.0
+ * Version:           0.3.1
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Tested up to:      6.8
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'ACS_VERSION', '0.3.0' );
+define( 'ACS_VERSION', '0.3.1' );
 define( 'ACS_PLUGIN_FILE', __FILE__ );
 define( 'ACS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ACS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -31,7 +31,7 @@ define( 'ACS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
  *   define( 'ACS_API_BASE_URL', 'http://localhost:8000' );
  */
 if ( ! defined( 'ACS_API_BASE_URL' ) ) {
-	define( 'ACS_API_BASE_URL', 'https://ischat-backend-production.up.railway.app' );
+	define( 'ACS_API_BASE_URL', 'https://ischat.isudev.pl' );
 }
 
 require_once ACS_PLUGIN_DIR . 'vendor/autoload.php';
@@ -62,6 +62,7 @@ require_once ACS_PLUGIN_DIR . 'includes/class-acs-chat-block.php';
 require_once ACS_PLUGIN_DIR . 'admin/class-acs-admin.php';
 
 function acs_init(): void {
+	add_action( 'init', 'acs_load_textdomain' );
 	ACS_Admin::init();
 	ACS_Sync_Manager::init();
 	ACS_Search_Block::init();
@@ -72,6 +73,14 @@ function acs_init(): void {
 	acs_enqueue_editor_assets();
 }
 add_action( 'plugins_loaded', 'acs_init' );
+
+/**
+ * Load translations shipped in /languages (the plugin is not on wordpress.org,
+ * so WordPress would otherwise only look in wp-content/languages/plugins).
+ */
+function acs_load_textdomain(): void {
+	load_plugin_textdomain( 'ai-ischat', false, dirname( plugin_basename( ACS_PLUGIN_FILE ) ) . '/languages' );
+}
 
 /**
  * Register all post meta fields used by the AI Indexing panel.
@@ -209,7 +218,7 @@ function acs_enqueue_editor_assets(): void {
 			$asset['version']
 		);
 
-		wp_set_script_translations( 'acs-index-panel', 'ai-ischat' );
+		wp_set_script_translations( 'acs-index-panel', 'ai-ischat', ACS_PLUGIN_DIR . 'languages' );
 	} );
 }
 

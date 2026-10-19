@@ -84,6 +84,7 @@ jobs:
             --exclude='composer.json' \
             --exclude='composer.lock' \
             --exclude='*.zip' \
+            --exclude='languages/*.py' \
             --exclude='.DS_Store' \
             . /tmp/ai-ischat/
           cd /tmp

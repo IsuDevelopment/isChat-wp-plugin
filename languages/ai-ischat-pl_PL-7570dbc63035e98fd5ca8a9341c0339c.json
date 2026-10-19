@@ -1,0 +1,27 @@
+{
+	"domain": "messages",
+	"locale_data": {
+		"messages": {
+			"": {
+				"domain": "messages",
+				"lang": "pl_PL",
+				"plural-forms": "nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);"
+			},
+			"Chat widget will appear here on the frontend.": [
+				"Widżet czatu pojawi się tutaj na stronie."
+			],
+			"Example questions": [
+				"Przykładowe pytania"
+			],
+			"IsChat Chat": [
+				"Czat IsChat"
+			],
+			"One question per line, up to 5. Leave empty to use the questions configured for this site.": [
+				"Jedno pytanie w wierszu, maksymalnie 5. Zostaw puste, aby użyć pytań skonfigurowanych dla tej witryny."
+			],
+			"Questions": [
+				"Pytania"
+			]
+		}
+	}
+}

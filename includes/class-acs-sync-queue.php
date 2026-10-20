@@ -71,15 +71,18 @@ class ACS_Sync_Queue {
 	}
 
 	/**
-	 * Get next batch of pending jobs.
+	 * Get next batch of pending jobs. Stock changes go first: a full sync of
+	 * hundreds of products must not keep a sold-out one on offer meanwhile.
 	 *
+	 * @param bool $stock_only Return stock changes only.
 	 * @return array<int, object>
 	 */
-	public static function get_pending_batch(): array {
+	public static function get_pending_batch( bool $stock_only = false ): array {
 		global $wpdb;
 
-		$table = $wpdb->prefix . self::TABLE_NAME;
-		$now   = current_time( 'mysql' );
+		$table  = $wpdb->prefix . self::TABLE_NAME;
+		$now    = current_time( 'mysql' );
+		$filter = $stock_only ? "AND action = 'stock'" : '';
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		return $wpdb->get_results(
@@ -87,7 +90,8 @@ class ACS_Sync_Queue {
 				"SELECT * FROM {$table}
 				 WHERE status = 'pending'
 				 AND scheduled_at <= %s
-				 ORDER BY id ASC
+				 {$filter}
+				 ORDER BY CASE WHEN action = 'stock' THEN 0 ELSE 1 END, id ASC
 				 LIMIT %d",
 				$now,
 				self::BATCH_SIZE

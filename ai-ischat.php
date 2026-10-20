@@ -3,7 +3,7 @@
  * Plugin Name:       IsChat
  * Plugin URI:        https://ischat.ai
  * Description:       Connects your WordPress site to the IsChat AI chat and search platform.
- * Version:           0.3.3
+ * Version:           0.3.4
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Tested up to:      6.8
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'ACS_VERSION', '0.3.3' );
+define( 'ACS_VERSION', '0.3.4' );
 define( 'ACS_PLUGIN_FILE', __FILE__ );
 define( 'ACS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ACS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -241,7 +241,7 @@ function acs_activate(): void {
 
 register_deactivation_hook( __FILE__, 'acs_deactivate' );
 function acs_deactivate(): void {
-	foreach ( [ ACS_Sync_Manager::CRON_HOOK, ACS_Sync_Manager::CATCHUP_CRON_HOOK ] as $hook ) {
+	foreach ( [ ACS_Sync_Manager::CRON_HOOK, ACS_Sync_Manager::CATCHUP_CRON_HOOK, ACS_Sync_Manager::STOCK_PUSH_HOOK ] as $hook ) {
 		$timestamp = wp_next_scheduled( $hook );
 		if ( $timestamp ) {
 			wp_unschedule_event( $timestamp, $hook );

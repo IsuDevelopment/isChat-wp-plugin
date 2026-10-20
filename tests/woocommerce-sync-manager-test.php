@@ -27,6 +27,9 @@ class ACS_Test_Variation {
 
 function get_post( int $id ): ?WP_Post { return $id > 0 ? new WP_Post( $id ) : null; }
 function update_post_meta( int $id, string $key, string $value ): void {}
+$acs_scheduled = [];
+function wp_next_scheduled( string $hook ) { global $acs_scheduled; return $acs_scheduled[ $hook ] ?? false; }
+function wp_schedule_single_event( int $time, string $hook ): void { global $acs_scheduled; $acs_scheduled[ $hook ] = $time; }
 
 require dirname( __DIR__ ) . '/includes/class-acs-sync-manager.php';
 
@@ -38,14 +41,20 @@ if ( ! method_exists( ACS_Sync_Manager::class, 'on_woocommerce_product_variation
 }
 
 ACS_Sync_Manager::on_woocommerce_product_variation_update( 9001, 7564 );
+ACS_Sync_Manager::on_woocommerce_product_stock_status_update( 7564 );
 ACS_Sync_Manager::on_deleted_post( 7564, new WP_Post( 7564 ) );
 
 $expected = [
 	[ 'post_id' => 7564, 'post_type' => 'product', 'action' => 'upsert' ],
+	[ 'post_id' => 7564, 'post_type' => 'product', 'action' => 'stock' ],
 	[ 'post_id' => 7564, 'post_type' => 'product', 'action' => 'upsert' ],
-	[ 'post_id' => 7564, 'post_type' => 'product', 'action' => 'upsert' ],
+	[ 'post_id' => 7564, 'post_type' => 'product', 'action' => 'stock' ],
 	[ 'post_id' => 7564, 'post_type' => 'product', 'action' => 'delete' ],
 ];
+
+if ( ! isset( $acs_scheduled[ ACS_Sync_Manager::STOCK_PUSH_HOOK ] ) ) {
+	throw new RuntimeException( 'A stock change must schedule an immediate push.' );
+}
 
 if ( ACS_Sync_Queue::$jobs !== $expected ) {
 	throw new RuntimeException( 'WooCommerce product lifecycle did not use the expected queue identities.' );

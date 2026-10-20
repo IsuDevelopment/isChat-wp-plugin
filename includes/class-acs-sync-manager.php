@@ -13,6 +13,7 @@ class ACS_Sync_Manager {
 
 	const CRON_HOOK        = 'acs_process_sync_queue';
 	const CATCHUP_CRON_HOOK = 'acs_catchup_sync';
+	const STOCK_PUSH_HOOK   = 'acs_push_stock_changes';
 
 	public static function init(): void {
 		// WordPress hooks for content changes
@@ -23,6 +24,10 @@ class ACS_Sync_Manager {
 		add_action( 'woocommerce_update_product_variation', [ __CLASS__, 'on_woocommerce_product_variation_update' ], 20, 2 );
 		add_action( 'woocommerce_product_set_stock', [ __CLASS__, 'on_woocommerce_product_stock_update' ], 20, 1 );
 		add_action( 'woocommerce_variation_set_stock', [ __CLASS__, 'on_woocommerce_variation_stock_update' ], 20, 1 );
+		// Stock status without managed quantities ("in stock" / "out of stock" toggled by hand or by an import).
+		add_action( 'woocommerce_product_set_stock_status', [ __CLASS__, 'on_woocommerce_product_stock_status_update' ], 20, 1 );
+		add_action( 'woocommerce_variation_set_stock_status', [ __CLASS__, 'on_woocommerce_variation_stock_status_update' ], 20, 1 );
+		add_action( self::STOCK_PUSH_HOOK, [ __CLASS__, 'push_stock_changes' ] );
 		add_action( 'woocommerce_scheduled_sales', [ __CLASS__, 'on_woocommerce_scheduled_sales' ], 20 );
 
 		// WP-Cron — runs every 5 minutes to process the queue
@@ -144,15 +149,33 @@ class ACS_Sync_Manager {
 	/** @param object $product WooCommerce product object. */
 	public static function on_woocommerce_product_stock_update( object $product ): void {
 		if ( method_exists( $product, 'get_id' ) ) {
-			self::queue_product_or_parent_update( (int) $product->get_id() );
+			self::queue_product_or_parent_update( (int) $product->get_id(), 'stock' );
 		}
 	}
 
 	/** @param object $variation WooCommerce variation object. */
 	public static function on_woocommerce_variation_stock_update( object $variation ): void {
 		if ( method_exists( $variation, 'get_parent_id' ) ) {
-			self::queue_product_update( (int) $variation->get_parent_id() );
+			self::queue_product_update( (int) $variation->get_parent_id(), 'stock' );
 		}
+	}
+
+	/** @param int|string $product_id */
+	public static function on_woocommerce_product_stock_status_update( $product_id ): void {
+		self::queue_product_or_parent_update( (int) $product_id, 'stock' );
+	}
+
+	/** @param int|string $variation_id */
+	public static function on_woocommerce_variation_stock_status_update( $variation_id ): void {
+		self::queue_product_or_parent_update( (int) $variation_id, 'stock' );
+	}
+
+	/**
+	 * Send queued stock changes now rather than on the next five-minute run.
+	 * The chat must stop offering a product the moment it sells out.
+	 */
+	public static function push_stock_changes(): void {
+		self::process_queue( 15, true );
 	}
 
 	/**
@@ -182,27 +205,36 @@ class ACS_Sync_Manager {
 		} while ( 250 === count( $product_ids ) );
 	}
 
-	private static function queue_product_or_parent_update( int $product_id ): void {
+	private static function queue_product_or_parent_update( int $product_id, string $action = 'upsert' ): void {
 		$post = $product_id > 0 ? get_post( $product_id ) : null;
 		if ( $post instanceof WP_Post && 'product_variation' === $post->post_type ) {
 			$parent_id = isset( $post->post_parent ) ? (int) $post->post_parent : 0;
 			if ( $parent_id > 0 ) {
-				self::queue_product_update( $parent_id );
+				self::queue_product_update( $parent_id, $action );
 			}
 			return;
 		}
 
-		self::queue_product_update( $product_id );
+		self::queue_product_update( $product_id, $action );
 	}
 
-	private static function queue_product_update( int $product_id ): void {
+	/**
+	 * @param string $action 'upsert', or 'stock' for a stock change: the same
+	 *                       full snapshot, but sent ahead of the rest of the
+	 *                       queue and right after the request that caused it.
+	 */
+	private static function queue_product_update( int $product_id, string $action = 'upsert' ): void {
 		$post = $product_id > 0 ? get_post( $product_id ) : null;
 		if ( ! $post instanceof WP_Post || ! ACS_Content_Extractor::is_indexable( $post ) ) {
 			return;
 		}
 
 		update_post_meta( $product_id, '_acs_chatbot_indexed', '0' );
-		ACS_Sync_Queue::enqueue( $product_id, 'product', 'upsert' );
+		ACS_Sync_Queue::enqueue( $product_id, 'product', $action );
+
+		if ( 'stock' === $action && ! wp_next_scheduled( self::STOCK_PUSH_HOOK ) ) {
+			wp_schedule_single_event( time(), self::STOCK_PUSH_HOOK );
+		}
 	}
 
 	/**
@@ -244,10 +276,11 @@ class ACS_Sync_Manager {
 	 * is marked failed and skipped; before, it took the whole batch down and
 	 * the same job was picked first again on every run.
 	 *
-	 * @param int $time_budget Seconds to keep working.
+	 * @param int  $time_budget Seconds to keep working.
+	 * @param bool $stock_only  Only send stock changes (the fast path).
 	 * @return array{processed: int, failed: int}
 	 */
-	public static function process_queue( int $time_budget = 20 ): array {
+	public static function process_queue( int $time_budget = 20, bool $stock_only = false ): array {
 		$summary = [ 'processed' => 0, 'failed' => 0 ];
 		if ( ! self::is_configured() ) {
 			return $summary;
@@ -258,7 +291,7 @@ class ACS_Sync_Manager {
 		$deadline = microtime( true ) + max( 1, $time_budget );
 
 		do {
-			$jobs = ACS_Sync_Queue::get_pending_batch();
+			$jobs = ACS_Sync_Queue::get_pending_batch( $stock_only );
 			foreach ( $jobs as $job ) {
 				if ( microtime( true ) >= $deadline ) {
 					break 2;

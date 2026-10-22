@@ -40,7 +40,7 @@ if ( ! method_exists( ACS_Sync_Manager::class, 'on_woocommerce_product_variation
 	throw new RuntimeException( 'Variation price and attribute updates must queue the parent product.' );
 }
 
-ACS_Sync_Manager::on_woocommerce_product_variation_update( 9001, 7564 );
+ACS_Sync_Manager::on_woocommerce_product_variation_update( 9001, new ACS_Test_Variation() );
 ACS_Sync_Manager::on_woocommerce_product_stock_status_update( 7564 );
 ACS_Sync_Manager::on_deleted_post( 7564, new WP_Post( 7564 ) );
 

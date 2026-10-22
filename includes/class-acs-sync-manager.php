@@ -132,10 +132,21 @@ class ACS_Sync_Manager {
 		self::queue_product_or_parent_update( $product_id );
 	}
 
-	/** Queue the variable parent after price, attribute or status changes. */
-	public static function on_woocommerce_product_variation_update( int $variation_id, int $parent_id = 0 ): void {
+	/**
+	 * Queue the variable parent after price, attribute or status changes.
+	 *
+	 * WooCommerce passes the variation object as the second argument (e.g. on stock changes from the order edit screen).
+	 *
+	 * @param int   $variation_id Variation ID.
+	 * @param mixed $variation    WooCommerce variation object, or a parent ID from older callers.
+	 */
+	public static function on_woocommerce_product_variation_update( int $variation_id, $variation = null ): void {
+		$parent_id = is_numeric( $variation ) ? (int) $variation : 0;
+
 		if ( $parent_id <= 0 ) {
-			$variation = function_exists( 'wc_get_product' ) ? wc_get_product( $variation_id ) : null;
+			if ( ! is_object( $variation ) && function_exists( 'wc_get_product' ) ) {
+				$variation = wc_get_product( $variation_id );
+			}
 			$parent_id = is_object( $variation ) && method_exists( $variation, 'get_parent_id' )
 				? (int) $variation->get_parent_id()
 				: 0;
